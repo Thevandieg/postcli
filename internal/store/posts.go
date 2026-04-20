@@ -114,6 +114,43 @@ func (s *Store) ListPendingInRange(ctx context.Context, from, to time.Time) ([]P
 	return scanPosts(rows)
 }
 
+func scanPostRow(row *sql.Row) (Post, error) {
+	var (
+		p                        Post
+		kind, pay, sched, stat   string
+		idemNull                 sql.NullString
+		lastErr, tweetID, created string
+	)
+	err := row.Scan(&p.ID, &kind, &pay, &sched, &stat, &idemNull, &lastErr, &tweetID, &created)
+	if err != nil {
+		return Post{}, err
+	}
+	return assemblePost(p, kind, pay, sched, stat, idemNull, lastErr, tweetID, created)
+}
+
+func assemblePost(p Post, kind, pay, sched, stat string, idemNull sql.NullString, lastErr, tweetID, created string) (Post, error) {
+	p.Kind = PostKind(kind)
+	if err := json.Unmarshal([]byte(pay), &p.Payload); err != nil {
+		return Post{}, err
+	}
+	var err error
+	p.ScheduledAt, err = time.Parse(time.RFC3339, sched)
+	if err != nil {
+		return Post{}, err
+	}
+	p.Status = PostStatus(stat)
+	if idemNull.Valid {
+		p.IdempotencyKey = idemNull.String
+	}
+	p.LastError = lastErr
+	p.TweetID = tweetID
+	p.CreatedAt, err = time.Parse(time.RFC3339, created)
+	if err != nil {
+		return Post{}, err
+	}
+	return p, nil
+}
+
 func scanPosts(rows *sql.Rows) ([]Post, error) {
 	var out []Post
 	for rows.Next() {
@@ -126,28 +163,29 @@ func scanPosts(rows *sql.Rows) ([]Post, error) {
 		if err := rows.Scan(&p.ID, &kind, &pay, &sched, &stat, &idemNull, &lastErr, &tweetID, &created); err != nil {
 			return nil, err
 		}
-		p.Kind = PostKind(kind)
-		if err := json.Unmarshal([]byte(pay), &p.Payload); err != nil {
-			return nil, err
-		}
-		var err error
-		p.ScheduledAt, err = time.Parse(time.RFC3339, sched)
-		if err != nil {
-			return nil, err
-		}
-		p.Status = PostStatus(stat)
-		if idemNull.Valid {
-			p.IdempotencyKey = idemNull.String
-		}
-		p.LastError = lastErr
-		p.TweetID = tweetID
-		p.CreatedAt, err = time.Parse(time.RFC3339, created)
+		p, err := assemblePost(p, kind, pay, sched, stat, idemNull, lastErr, tweetID, created)
 		if err != nil {
 			return nil, err
 		}
 		out = append(out, p)
 	}
 	return out, rows.Err()
+}
+
+// GetPost returns one post by id.
+func (s *Store) GetPost(ctx context.Context, id int64) (Post, error) {
+	row := s.db.QueryRowContext(ctx, `
+		SELECT id, kind, payload, scheduled_at, status, idempotency_key, last_error, tweet_id, created_at
+		FROM posts WHERE id = ?
+	`, id)
+	p, err := scanPostRow(row)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return Post{}, fmt.Errorf("post %d: not found", id)
+		}
+		return Post{}, err
+	}
+	return p, nil
 }
 
 func (s *Store) ListDuePending(ctx context.Context, now time.Time, limit int) ([]Post, error) {

@@ -2,6 +2,7 @@ package schedule
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -27,12 +28,14 @@ func (r *Runner) FlushDue(ctx context.Context, now time.Time) error {
 	if err != nil {
 		return err
 	}
+	var errs []error
 	for _, p := range posts {
 		if err := r.processOne(ctx, p); err != nil {
 			fmt.Fprintf(os.Stderr, "postx: post %d: %v\n", p.ID, err)
+			errs = append(errs, fmt.Errorf("post %d: %w", p.ID, err))
 		}
 	}
-	return nil
+	return errors.Join(errs...)
 }
 
 func (r *Runner) processOne(ctx context.Context, p store.Post) error {

@@ -30,6 +30,11 @@ func TokenPath() string {
 	return filepath.Join(Dir(), "oauth.json")
 }
 
+// ThemePath returns the active theme name (one line, e.g. "violet").
+func ThemePath() string {
+	return filepath.Join(Dir(), "theme")
+}
+
 // EnsureDir creates the config directory if needed.
 func EnsureDir() error {
 	return os.MkdirAll(Dir(), 0o700)

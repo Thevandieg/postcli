@@ -67,6 +67,27 @@ func TestDuePending(t *testing.T) {
 	}
 }
 
+func TestGetPost(t *testing.T) {
+	ctx := context.Background()
+	db, err := Open(ctx, t.TempDir()+"/q.db")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	s := NewStore(db)
+	id, err := s.InsertPost(ctx, KindText, PostPayload{Text: "x"}, time.Now().UTC(), StatusPending, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	p, err := s.GetPost(ctx, id)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p.Payload.Text != "x" || p.Status != StatusPending {
+		t.Fatalf("%+v", p)
+	}
+}
+
 func TestCancel(t *testing.T) {
 	ctx := context.Background()
 	db, err := Open(ctx, t.TempDir()+"/q.db")

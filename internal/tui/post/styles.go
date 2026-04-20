@@ -8,81 +8,108 @@ import (
 	"charm.land/bubbles/v2/textarea"
 	"charm.land/bubbles/v2/textinput"
 	"charm.land/lipgloss/v2"
+
+	"postcli/internal/theme"
 )
 
-// Dark-terminal palette (256-color).
-var (
-	colAccent   = lipgloss.Color("86")  // cyan
-	colAccent2  = lipgloss.Color("213") // pink
-	colViolet   = lipgloss.Color("141")
-	colAmber    = lipgloss.Color("214")
-	colLime     = lipgloss.Color("156")
-	colRose     = lipgloss.Color("203")
-	colText     = lipgloss.Color("252")
-	colMuted    = lipgloss.Color("245")
-	colDim      = lipgloss.Color("240")
-	colPanel    = lipgloss.Color("236")
-	colSubtle   = lipgloss.Color("238")
+func p() theme.Palette {
+	return theme.Current()
+}
 
-	styleTitle = lipgloss.NewStyle().
-			Bold(true).
-			Foreground(colAccent).
-			BorderStyle(lipgloss.Border{Left: "│"}).
-			BorderForeground(colViolet).
-			PaddingLeft(1)
+func titleStyle() lipgloss.Style {
+	x := p()
+	return lipgloss.NewStyle().
+		Bold(true).
+		Foreground(x.Accent).
+		BorderStyle(lipgloss.Border{Left: "│"}).
+		BorderForeground(x.Border).
+		PaddingLeft(1)
+}
 
-	styleSubtitle = lipgloss.NewStyle().Foreground(colMuted).Bold(true)
-	styleHint     = lipgloss.NewStyle().Foreground(colDim).Italic(true)
-	styleErr      = lipgloss.NewStyle().Foreground(colRose).Bold(true)
-	styleOk       = lipgloss.NewStyle().Foreground(colLime).Bold(true)
-	styleBadge    = lipgloss.NewStyle().Foreground(colPanel).Background(colViolet).Padding(0, 1).Bold(true)
+func subtitleStyle() lipgloss.Style {
+	return lipgloss.NewStyle().Foreground(p().Muted).Bold(true)
+}
 
-	styleMenuSel = lipgloss.NewStyle().
-			Foreground(colText).
-			Background(lipgloss.Color("57")).
-			Padding(0, 1).
-			Bold(true)
+func hintStyle() lipgloss.Style {
+	return lipgloss.NewStyle().Foreground(p().Dim).Italic(true)
+}
 
-	styleMenuIdle = lipgloss.NewStyle().Foreground(colMuted)
-	styleCursor     = lipgloss.NewStyle().Foreground(colAccent2).Bold(true)
-	styleFrame      = lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(colViolet).Padding(0, 1)
-	styleFrameInner = lipgloss.NewStyle().Padding(1, 2)
+func errStyle() lipgloss.Style {
+	return lipgloss.NewStyle().Foreground(p().Rose).Bold(true)
+}
 
-	styleLabel = lipgloss.NewStyle().Foreground(colAmber).Bold(true)
-	styleValue = lipgloss.NewStyle().Foreground(colText)
-)
+func okStyle() lipgloss.Style {
+	return lipgloss.NewStyle().Foreground(p().Lime).Bold(true)
+}
+
+func badgeStyle() lipgloss.Style {
+	x := p()
+	return lipgloss.NewStyle().Foreground(x.Panel).Background(x.Border).Padding(0, 1).Bold(true)
+}
+
+func menuSelStyle() lipgloss.Style {
+	x := p()
+	return lipgloss.NewStyle().
+		Foreground(x.Text).
+		Background(x.MenuBG).
+		Padding(0, 1).
+		Bold(true)
+}
+
+func menuIdleStyle() lipgloss.Style {
+	return lipgloss.NewStyle().Foreground(p().Muted)
+}
+
+func cursorStyle() lipgloss.Style {
+	return lipgloss.NewStyle().Foreground(p().Accent2).Bold(true)
+}
+
+func frameStyle() lipgloss.Style {
+	return lipgloss.NewStyle().Border(lipgloss.RoundedBorder()).BorderForeground(p().Border).Padding(0, 1)
+}
+
+var frameInnerStyle = lipgloss.NewStyle().Padding(1, 2)
+
+func labelStyle() lipgloss.Style {
+	return lipgloss.NewStyle().Foreground(p().Amber).Bold(true)
+}
+
+func valueStyle() lipgloss.Style {
+	return lipgloss.NewStyle().Foreground(p().Text)
+}
 
 func applyBubbleStyles(ti *textinput.Model, ta *textarea.Model, fp *filepicker.Model, sp *spinner.Model) {
+	x := p()
 	tis := textinput.DefaultDarkStyles()
-	tis.Focused.Prompt = lipgloss.NewStyle().Foreground(colAccent).Bold(true)
-	tis.Focused.Text = lipgloss.NewStyle().Foreground(colText)
-	tis.Focused.Placeholder = lipgloss.NewStyle().Foreground(colDim)
-	tis.Blurred.Text = lipgloss.NewStyle().Foreground(colMuted)
-	tis.Cursor.Color = colAccent2
+	tis.Focused.Prompt = lipgloss.NewStyle().Foreground(x.Accent).Bold(true)
+	tis.Focused.Text = lipgloss.NewStyle().Foreground(x.Text)
+	tis.Focused.Placeholder = lipgloss.NewStyle().Foreground(x.Dim)
+	tis.Blurred.Text = lipgloss.NewStyle().Foreground(x.Muted)
+	tis.Cursor.Color = x.Accent2
 	ti.SetStyles(tis)
 
 	tas := textarea.DefaultDarkStyles()
-	tas.Focused.Text = lipgloss.NewStyle().Foreground(colText)
-	tas.Focused.Placeholder = lipgloss.NewStyle().Foreground(colDim)
-	tas.Focused.Prompt = lipgloss.NewStyle().Foreground(colAccent).Bold(true)
-	tas.Focused.LineNumber = lipgloss.NewStyle().Foreground(colDim)
-	tas.Blurred.Text = lipgloss.NewStyle().Foreground(colMuted)
-	tas.Cursor.Color = colAccent2
+	tas.Focused.Text = lipgloss.NewStyle().Foreground(x.Text)
+	tas.Focused.Placeholder = lipgloss.NewStyle().Foreground(x.Dim)
+	tas.Focused.Prompt = lipgloss.NewStyle().Foreground(x.Accent).Bold(true)
+	tas.Focused.LineNumber = lipgloss.NewStyle().Foreground(x.Dim)
+	tas.Blurred.Text = lipgloss.NewStyle().Foreground(x.Muted)
+	tas.Cursor.Color = x.Accent2
 	ta.SetStyles(tas)
 
 	fs := filepicker.DefaultStyles()
-	fs.Cursor = lipgloss.NewStyle().Foreground(colAccent2).Bold(true)
-	fs.Selected = lipgloss.NewStyle().Foreground(colText).Background(lipgloss.Color("57")).Bold(true)
-	fs.Directory = lipgloss.NewStyle().Foreground(colAccent)
-	fs.File = lipgloss.NewStyle().Foreground(colMuted)
-	fs.Symlink = lipgloss.NewStyle().Foreground(colViolet)
-	fs.Permission = lipgloss.NewStyle().Foreground(colDim)
-	fs.FileSize = lipgloss.NewStyle().Foreground(colDim)
-	fs.EmptyDirectory = lipgloss.NewStyle().Foreground(colDim).Italic(true)
+	fs.Cursor = lipgloss.NewStyle().Foreground(x.Accent2).Bold(true)
+	fs.Selected = lipgloss.NewStyle().Foreground(x.Text).Background(x.MenuBG).Bold(true)
+	fs.Directory = lipgloss.NewStyle().Foreground(x.Accent)
+	fs.File = lipgloss.NewStyle().Foreground(x.Muted)
+	fs.Symlink = lipgloss.NewStyle().Foreground(x.Border)
+	fs.Permission = lipgloss.NewStyle().Foreground(x.Dim)
+	fs.FileSize = lipgloss.NewStyle().Foreground(x.Dim)
+	fs.EmptyDirectory = lipgloss.NewStyle().Foreground(x.Dim).Italic(true)
 	fp.Styles = fs
 
 	sp.Spinner = spinner.Dot
-	sp.Style = lipgloss.NewStyle().Foreground(colAccent).Bold(true)
+	sp.Style = lipgloss.NewStyle().Foreground(x.Accent).Bold(true)
 }
 
 func stepLabel(s step) string {
@@ -123,8 +150,8 @@ func stepIndex(s step) int {
 	}
 }
 
-// progressDots shows a compact step indicator (6 steps max).
 func progressDots(s step) string {
+	x := p()
 	const n = 6
 	idx := stepIndex(s)
 	if idx < 1 {
@@ -133,34 +160,42 @@ func progressDots(s step) string {
 	var parts []string
 	for i := 1; i <= n; i++ {
 		if i == idx {
-			parts = append(parts, lipgloss.NewStyle().Foreground(colAccent2).Bold(true).Render("●"))
+			parts = append(parts, lipgloss.NewStyle().Foreground(x.Accent2).Bold(true).Render("●"))
 		} else if i < idx {
-			parts = append(parts, lipgloss.NewStyle().Foreground(colLime).Render("✓"))
+			parts = append(parts, lipgloss.NewStyle().Foreground(x.Lime).Render("✓"))
 		} else {
-			parts = append(parts, lipgloss.NewStyle().Foreground(colSubtle).Render("·"))
+			parts = append(parts, lipgloss.NewStyle().Foreground(x.Subtle).Render("·"))
 		}
 	}
-	return strings.Join(parts, lipgloss.NewStyle().Foreground(colDim).Render("  "))
+	return strings.Join(parts, lipgloss.NewStyle().Foreground(x.Dim).Render("  "))
 }
 
-func headerBlock(step step) string {
-	badge := styleBadge.Render(strings.ToUpper(stepLabel(step)))
-	line := lipgloss.JoinHorizontal(lipgloss.Center, badge, "  ", progressDots(step))
-	sub := styleSubtitle.Render(stepLabel(step))
-	return lipgloss.JoinVertical(lipgloss.Left, styleTitle.Render("postx compose"), "", line, sub)
+func headerBlock(s step) string {
+	badge := badgeStyle().Render(strings.ToUpper(stepLabel(s)))
+	line := lipgloss.JoinHorizontal(lipgloss.Center, badge, "  ", progressDots(s))
+	sub := subtitleStyle().Render(stepLabel(s))
+	return lipgloss.JoinVertical(lipgloss.Left, titleStyle().Render("postx compose"), "", line, sub)
 }
 
 func hintLine(s string) string {
-	return styleHint.Render(s)
+	return hintStyle().Render(s)
 }
 
 func menuLine(selected bool, label string) string {
 	if selected {
-		return styleCursor.Render("▸ ") + styleMenuSel.Render(" "+label+" ")
+		return cursorStyle().Render("▸ ") + menuSelStyle().Render(" "+label+" ")
 	}
-	return styleMenuIdle.Render("    ") + styleMenuIdle.Render(label)
+	return menuIdleStyle().Render("    ") + menuIdleStyle().Render(label)
 }
 
 func framedBlock(inner string) string {
-	return styleFrame.Render(styleFrameInner.Render(inner))
+	return frameStyle().Render(frameInnerStyle.Render(inner))
+}
+
+func dimTextStyle() lipgloss.Style {
+	return lipgloss.NewStyle().Foreground(p().Dim)
+}
+
+func mutedItalicStyle() lipgloss.Style {
+	return lipgloss.NewStyle().Foreground(p().Muted).Italic(true)
 }

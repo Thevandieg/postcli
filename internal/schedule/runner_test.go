@@ -83,7 +83,9 @@ func TestRunnerFailed(t *testing.T) {
 		t.Fatal(err)
 	}
 	r := &Runner{Store: st, Poster: fakePoster{err: errors.New("boom")}}
-	_ = r.FlushDue(ctx, time.Now().UTC())
+	if err := r.FlushDue(ctx, time.Now().UTC()); err == nil {
+		t.Fatal("expected FlushDue error")
+	}
 	day := time.Date(when.Year(), when.Month(), when.Day(), 0, 0, 0, 0, time.UTC)
 	posts, err := st.ListPostsForDay(ctx, day)
 	if err != nil {

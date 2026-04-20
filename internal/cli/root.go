@@ -11,7 +11,7 @@ func Execute() error {
 		Short: "Schedule and post to X from the terminal",
 		Long:  "postx is a Bubble Tea TUI and headless scheduler for X (Twitter) API v2.",
 	}
-	root.AddCommand(cmdLogin(), cmdLogout(), cmdPost(), cmdStatus(), cmdFlush(), cmdDaemon(), cmdCancel())
+	root.AddCommand(cmdLogin(), cmdLogout(), cmdPost(), cmdStatus(), cmdFlush(), cmdDaemon(), cmdCancel(), cmdTheme())
 	root.SilenceUsage = true
 	return root.Execute()
 }

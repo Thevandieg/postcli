@@ -15,6 +15,7 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"postcli/internal/schedule"
+	"postcli/internal/theme"
 	"postcli/internal/store"
 	"postcli/internal/xapi"
 )
@@ -55,6 +56,7 @@ type model struct {
 
 // Run launches the post wizard TUI.
 func Run(st *store.Store, client *xapi.Client, runner *schedule.Runner) error {
+	_ = theme.Load()
 	ti := textinput.New()
 	ti.Placeholder = "2006-01-02 15:04 (local)"
 	ti.CharLimit = 32
@@ -315,9 +317,20 @@ func (m model) submitCmd() tea.Cmd {
 		summary := fmt.Sprintf("Queued post #%d for %s", id, sched.Format(time.RFC3339))
 		if m.whenCursor == 0 {
 			if err := m.runner.FlushDue(ctx, time.Now().UTC()); err != nil {
-				return submitErrMsg{err: fmt.Errorf("queued but flush failed: %w", err)}
+				return submitErrMsg{err: fmt.Errorf("post to X failed: %w", err)}
 			}
-			summary = fmt.Sprintf("Posted #%d", id)
+			post, err := m.store.GetPost(ctx, id)
+			if err != nil {
+				return submitErrMsg{err: err}
+			}
+			if post.Status != store.StatusPosted {
+				msg := strings.TrimSpace(post.LastError)
+				if msg == "" {
+					msg = fmt.Sprintf("post stayed %s (not published)", post.Status)
+				}
+				return submitErrMsg{err: fmt.Errorf("%s", msg)}
+			}
+			summary = fmt.Sprintf("Posted #%d (tweet %s)", id, post.TweetID)
 		}
 		return submitErrMsg{summary: summary}
 	}
@@ -345,7 +358,7 @@ func (m model) View() tea.View {
 
 	if m.working {
 		writeHeader()
-		line := lipgloss.JoinHorizontal(lipgloss.Center, m.spinner.View(), "  ", styleOk.Render("Submitting…"))
+		line := lipgloss.JoinHorizontal(lipgloss.Center, m.spinner.View(), "  ", okStyle().Render("Submitting…"))
 		b.WriteString(line)
 		b.WriteString("\n")
 		v := tea.NewView(b.String())
@@ -355,7 +368,7 @@ func (m model) View() tea.View {
 
 	if m.doneMsg != "" {
 		writeHeader()
-		b.WriteString(framedBlock(styleOk.Render(m.doneMsg)))
+		b.WriteString(framedBlock(okStyle().Render(m.doneMsg)))
 		b.WriteString("\n")
 		v := tea.NewView(b.String())
 		v.AltScreen = true
@@ -364,7 +377,7 @@ func (m model) View() tea.View {
 
 	writeHeader()
 	if m.err != "" {
-		b.WriteString(styleErr.Render(m.err))
+		b.WriteString(errStyle().Render(m.err))
 		b.WriteString("\n\n")
 	}
 
@@ -389,7 +402,7 @@ func (m model) View() tea.View {
 
 	case stepSchedule:
 		b.WriteString(framedBlock(
-			styleSubtitle.Render("Local time") + "\n" + lipgloss.NewStyle().Foreground(colDim).Render("Format: 2006-01-02 15:04") + "\n\n" + m.scheduleInput.View(),
+			subtitleStyle().Render("Local time") + "\n" + dimTextStyle().Render("Format: 2006-01-02 15:04") + "\n\n" + m.scheduleInput.View(),
 		))
 		b.WriteString("\n")
 		b.WriteString(hintLine("enter: continue when valid"))
@@ -415,15 +428,15 @@ func (m model) View() tea.View {
 			when = t.Format(time.RFC3339)
 		}
 		var sum strings.Builder
-		sum.WriteString(styleLabel.Render("Kind "))
-		sum.WriteString(styleValue.Render(kind))
+		sum.WriteString(labelStyle().Render("Kind "))
+		sum.WriteString(valueStyle().Render(kind))
 		sum.WriteString("\n")
-		sum.WriteString(styleLabel.Render("When "))
-		sum.WriteString(styleValue.Render(when))
+		sum.WriteString(labelStyle().Render("When "))
+		sum.WriteString(valueStyle().Render(when))
 		sum.WriteString("\n")
 		if m.kindCursor == 1 {
-			sum.WriteString(styleLabel.Render("File "))
-			sum.WriteString(styleValue.Render(m.picker.Path))
+			sum.WriteString(labelStyle().Render("File "))
+			sum.WriteString(valueStyle().Render(m.picker.Path))
 			sum.WriteString("\n")
 		}
 		preview := strings.TrimSpace(m.body.Value())
@@ -431,9 +444,9 @@ func (m model) View() tea.View {
 			preview = preview[:160] + "…"
 		}
 		sum.WriteString("\n")
-		sum.WriteString(styleSubtitle.Render("Preview"))
+		sum.WriteString(subtitleStyle().Render("Preview"))
 		sum.WriteString("\n")
-		sum.WriteString(lipgloss.NewStyle().Foreground(colMuted).Italic(true).Render(preview))
+		sum.WriteString(mutedItalicStyle().Render(preview))
 
 		b.WriteString(framedBlock(sum.String()))
 		b.WriteString("\n")

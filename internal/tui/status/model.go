@@ -11,6 +11,7 @@ import (
 	"charm.land/lipgloss/v2"
 
 	"postcli/internal/store"
+	"postcli/internal/theme"
 )
 
 type model struct {
@@ -26,6 +27,7 @@ type model struct {
 
 // Run shows the calendar status TUI.
 func Run(st *store.Store) error {
+	_ = theme.Load()
 	now := time.Now().UTC()
 	m := &model{
 		store: st,
@@ -126,21 +128,22 @@ func (m *model) refreshDetail() {
 	if len(posts) == 0 {
 		b.WriteString("(no posts this day)")
 	} else {
+		x := theme.Current()
 		for _, p := range posts {
-			b.WriteString(lipgloss.NewStyle().Bold(true).Render(fmt.Sprintf("#%d · %s · %s", p.ID, p.Kind, p.Status)))
+			b.WriteString(lipgloss.NewStyle().Bold(true).Foreground(x.Accent).Render(fmt.Sprintf("#%d · %s · %s", p.ID, p.Kind, p.Status)))
 			b.WriteString("\n")
-			b.WriteString(fmt.Sprintf("  %s UTC\n", p.ScheduledAt.UTC().Format("15:04:05")))
+			b.WriteString(lipgloss.NewStyle().Foreground(x.Muted).Render(fmt.Sprintf("  %s UTC", p.ScheduledAt.UTC().Format("15:04:05"))) + "\n")
 			if p.TweetID != "" {
-				b.WriteString(fmt.Sprintf("  tweet: %s\n", p.TweetID))
+				b.WriteString(lipgloss.NewStyle().Foreground(x.Dim).Render(fmt.Sprintf("  tweet: %s", p.TweetID)) + "\n")
 			}
 			if p.LastError != "" {
-				b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("203")).Render("  err: "+p.LastError) + "\n")
+				b.WriteString(lipgloss.NewStyle().Foreground(x.Rose).Render("  err: "+p.LastError) + "\n")
 			}
 			txt := strings.TrimSpace(p.Payload.Text)
 			if len(txt) > 200 {
 				txt = txt[:200] + "…"
 			}
-			b.WriteString(fmt.Sprintf("  %s\n\n", txt))
+			b.WriteString(lipgloss.NewStyle().Foreground(x.Text).Render(fmt.Sprintf("  %s", txt)) + "\n\n")
 		}
 	}
 	m.vp.SetContent(b.String())
@@ -148,19 +151,20 @@ func (m *model) refreshDetail() {
 
 func (m *model) View() tea.View {
 	m.refreshDetail()
-	header := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("252")).Render("postx — schedule")
-	sub := lipgloss.NewStyle().Foreground(lipgloss.Color("241")).Render(
+	x := theme.Current()
+	header := lipgloss.NewStyle().Bold(true).Foreground(x.Accent).BorderStyle(lipgloss.Border{Left: "│"}).BorderForeground(x.Border).PaddingLeft(1).Render("postx — schedule")
+	sub := lipgloss.NewStyle().Foreground(x.Muted).Render(
 		m.month.Format("January 2006") + " · selected " + m.day.Format("2006-01-02") + " UTC",
 	)
 	cal := m.renderCalendar()
-	help := lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render(
+	help := lipgloss.NewStyle().Foreground(x.Dim).Italic(true).Render(
 		"←/→ h/l: day · ↑/↓ j/k: week · [/]: month · t: today · q: quit",
 	)
 
 	left := lipgloss.JoinVertical(lipgloss.Left, header, "", sub, "", cal, "", help)
 	right := lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(lipgloss.Color("236")).
+		BorderForeground(x.Border).
 		Padding(0, 1).
 		Render(m.vp.View())
 
@@ -183,15 +187,16 @@ func postsOnDay(monthPosts []store.Post, day time.Time) []store.Post {
 }
 
 func (m *model) renderCalendar() string {
+	x := theme.Current()
 	first := m.month
 	weekday := int(first.Weekday())
 	start := first.AddDate(0, 0, -weekday)
 
-	dim := lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
-	today := lipgloss.NewStyle().Foreground(lipgloss.Color("86"))
-	sel := lipgloss.NewStyle().Foreground(lipgloss.Color("212")).Bold(true)
-	normal := lipgloss.NewStyle().Foreground(lipgloss.Color("252"))
-	mark := lipgloss.NewStyle().Foreground(lipgloss.Color("214"))
+	dim := lipgloss.NewStyle().Foreground(x.Dim)
+	today := lipgloss.NewStyle().Foreground(x.Accent)
+	sel := lipgloss.NewStyle().Foreground(x.Accent2).Bold(true)
+	normal := lipgloss.NewStyle().Foreground(x.Text)
+	mark := lipgloss.NewStyle().Foreground(x.Amber)
 
 	var rows []string
 	hdr := "Su Mo Tu We Th Fr Sa"

@@ -13,6 +13,9 @@ CLI for scheduling and posting to **X** using the X API v2, with a [Bubble Tea](
 | `postx flush` | Process all due posts once (for cron or systemd) |
 | `postx daemon` | Poll on an interval and run `flush` logic |
 | `postx cancel ID` | Soft-cancel a **pending** post |
+| `postx theme` | Show the active TUI theme and list presets |
+| `postx theme ls` | List themes (`violet`, `sky`, `orange`, `neutral`, `green`) |
+| `postx theme set NAME` | Save a theme to `$XDG_CONFIG_HOME/postcli/theme` (aliases: `blue`→sky, `pink`→violet, …) |
 
 In **`postx status`**: **←/→** or **h/l** moves the selected day by one; **↑/↓** or **j/k** moves by one week; **`[` / `]`** changes month; **`t`** jumps to today (UTC).
 
