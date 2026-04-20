@@ -71,8 +71,7 @@ func Run(st *store.Store, client *xapi.Client, runner *schedule.Runner) error {
 	fp.CurrentDirectory = "."
 
 	sp := spinner.New()
-	sp.Spinner = spinner.Dot
-	sp.Style = lipgloss.NewStyle().Foreground(lipgloss.Color("205"))
+	applyBubbleStyles(&ti, &ta, &fp, &sp)
 
 	m := model{
 		step:          stepKind,
@@ -339,91 +338,106 @@ func (m model) parsedSchedule() (time.Time, error) {
 
 func (m model) View() tea.View {
 	var b strings.Builder
-	title := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("252")).Render("postx — compose")
-	b.WriteString(title)
-	b.WriteString("\n\n")
+	writeHeader := func() {
+		b.WriteString(headerBlock(m.step))
+		b.WriteString("\n\n")
+	}
 
 	if m.working {
-		b.WriteString(m.spinner.View())
-		b.WriteString(" working…\n")
+		writeHeader()
+		line := lipgloss.JoinHorizontal(lipgloss.Center, m.spinner.View(), "  ", styleOk.Render("Submitting…"))
+		b.WriteString(line)
+		b.WriteString("\n")
 		v := tea.NewView(b.String())
 		v.AltScreen = true
 		return v
 	}
 
 	if m.doneMsg != "" {
-		b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("86")).Render(m.doneMsg))
+		writeHeader()
+		b.WriteString(framedBlock(styleOk.Render(m.doneMsg)))
 		b.WriteString("\n")
 		v := tea.NewView(b.String())
 		v.AltScreen = true
 		return v
 	}
 
+	writeHeader()
 	if m.err != "" {
-		b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("203")).Render(m.err))
+		b.WriteString(styleErr.Render(m.err))
 		b.WriteString("\n\n")
 	}
 
 	switch m.step {
 	case stepKind:
-		b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("241")).Render("Content type") + "\n")
 		items := []string{"Text only", "Text + image (jpg/png/gif/webp)"}
 		for i, it := range items {
-			cursor := "  "
-			if m.kindCursor == i {
-				cursor = "> "
-			}
-			b.WriteString(fmt.Sprintf("%s%s\n", cursor, it))
+			b.WriteString(menuLine(m.kindCursor == i, it))
+			b.WriteString("\n")
 		}
-		b.WriteString("\n" + lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render("enter: next · q/esc: quit"))
+		b.WriteString("\n")
+		b.WriteString(hintLine("↑/↓ j/k: move · enter: next · esc: quit"))
 
 	case stepWhen:
-		b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("241")).Render("When") + "\n")
 		opts := []string{"Post now (queue + flush immediately)", "Schedule for later"}
 		for i, it := range opts {
-			cursor := "  "
-			if m.whenCursor == i {
-				cursor = "> "
-			}
-			b.WriteString(fmt.Sprintf("%s%s\n", cursor, it))
+			b.WriteString(menuLine(m.whenCursor == i, it))
+			b.WriteString("\n")
 		}
-		b.WriteString("\n" + lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render("enter: next"))
+		b.WriteString("\n")
+		b.WriteString(hintLine("↑/↓ j/k: move · enter: continue"))
 
 	case stepSchedule:
-		b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("241")).Render("Schedule (local time)") + "\n\n")
-		b.WriteString(m.scheduleInput.View())
-		b.WriteString("\n\n" + lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render("enter: continue"))
+		b.WriteString(framedBlock(
+			styleSubtitle.Render("Local time") + "\n" + lipgloss.NewStyle().Foreground(colDim).Render("Format: 2006-01-02 15:04") + "\n\n" + m.scheduleInput.View(),
+		))
+		b.WriteString("\n")
+		b.WriteString(hintLine("enter: continue when valid"))
 
 	case stepBody:
-		b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("241")).Render("Compose (ctrl+d: done)") + "\n\n")
-		b.WriteString(m.body.View())
+		b.WriteString(framedBlock(m.body.View()))
 		b.WriteString("\n")
+		b.WriteString(hintLine("ctrl+d: done composing · esc: quit (when not editing)"))
 
 	case stepMedia:
-		b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("241")).Render("Pick media · enter: select file") + "\n\n")
-		b.WriteString(m.picker.View())
+		b.WriteString(framedBlock(m.picker.View()))
+		b.WriteString("\n")
+		b.WriteString(hintLine("enter: pick file · h/esc: parent · q: quit"))
 
 	case stepConfirm:
-		kind := "text"
+		kind := "Text only"
 		if m.kindCursor == 1 {
-			kind = "text + media"
+			kind = "Text + media"
 		}
-		when := "now"
+		when := "Immediately (post after save)"
 		if m.whenCursor == 1 {
 			t, _ := m.parsedSchedule()
 			when = t.Format(time.RFC3339)
 		}
-		b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("241")).Render("Confirm") + "\n\n")
-		b.WriteString(fmt.Sprintf("Kind: %s\nWhen: %s\n", kind, when))
+		var sum strings.Builder
+		sum.WriteString(styleLabel.Render("Kind "))
+		sum.WriteString(styleValue.Render(kind))
+		sum.WriteString("\n")
+		sum.WriteString(styleLabel.Render("When "))
+		sum.WriteString(styleValue.Render(when))
+		sum.WriteString("\n")
 		if m.kindCursor == 1 {
-			b.WriteString(fmt.Sprintf("File: %s\n", m.picker.Path))
+			sum.WriteString(styleLabel.Render("File "))
+			sum.WriteString(styleValue.Render(m.picker.Path))
+			sum.WriteString("\n")
 		}
 		preview := strings.TrimSpace(m.body.Value())
 		if len(preview) > 160 {
 			preview = preview[:160] + "…"
 		}
-		b.WriteString(fmt.Sprintf("\n%s\n\n", preview))
-		b.WriteString(lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render("y/enter: submit · n: back"))
+		sum.WriteString("\n")
+		sum.WriteString(styleSubtitle.Render("Preview"))
+		sum.WriteString("\n")
+		sum.WriteString(lipgloss.NewStyle().Foreground(colMuted).Italic(true).Render(preview))
+
+		b.WriteString(framedBlock(sum.String()))
+		b.WriteString("\n")
+		b.WriteString(hintLine("y / enter: submit · n / h / ← : back to edit"))
 	}
 
 	v := tea.NewView(b.String())
