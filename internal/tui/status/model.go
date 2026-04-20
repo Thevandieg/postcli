@@ -54,23 +54,35 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.String() {
 		case "ctrl+c", "q", "esc":
 			return m, tea.Quit
+		// One day (calendar grid left/right)
 		case "left", "h":
+			m.addDays(-1)
+			return m, nil
+		case "right", "l":
+			m.addDays(1)
+			return m, nil
+		// One week (calendar grid up/down)
+		case "up", "k":
+			m.addDays(-7)
+			return m, nil
+		case "down", "j":
+			m.addDays(7)
+			return m, nil
+		// Month
+		case "[":
 			m.month = m.month.AddDate(0, -1, 0)
 			m.day = clampDay(m.day, m.month)
 			m.refreshDetail()
 			return m, nil
-		case "right", "l":
+		case "]":
 			m.month = m.month.AddDate(0, 1, 0)
 			m.day = clampDay(m.day, m.month)
 			m.refreshDetail()
 			return m, nil
-		case "up", "k":
-			m.day = m.day.AddDate(0, 0, -7)
-			m.month = time.Date(m.day.Year(), m.day.Month(), 1, 0, 0, 0, 0, time.UTC)
-			m.refreshDetail()
-			return m, nil
-		case "down", "j":
-			m.day = m.day.AddDate(0, 0, 7)
+		// Jump to today (UTC date)
+		case "t", "T":
+			now := time.Now().UTC()
+			m.day = time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
 			m.month = time.Date(m.day.Year(), m.day.Month(), 1, 0, 0, 0, 0, time.UTC)
 			m.refreshDetail()
 			return m, nil
@@ -79,6 +91,12 @@ func (m *model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	m.vp, cmd = m.vp.Update(msg)
 	return m, cmd
+}
+
+func (m *model) addDays(delta int) {
+	m.day = m.day.AddDate(0, 0, delta)
+	m.month = time.Date(m.day.Year(), m.day.Month(), 1, 0, 0, 0, 0, time.UTC)
+	m.refreshDetail()
 }
 
 func clampDay(day, month time.Time) time.Time {
@@ -135,7 +153,9 @@ func (m *model) View() tea.View {
 		m.month.Format("January 2006") + " · selected " + m.day.Format("2006-01-02") + " UTC",
 	)
 	cal := m.renderCalendar()
-	help := lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render("h/l: month · j/k: week · q: quit")
+	help := lipgloss.NewStyle().Foreground(lipgloss.Color("240")).Render(
+		"←/→ h/l: day · ↑/↓ j/k: week · [/]: month · t: today · q: quit",
+	)
 
 	left := lipgloss.JoinVertical(lipgloss.Left, header, "", sub, "", cal, "", help)
 	right := lipgloss.NewStyle().

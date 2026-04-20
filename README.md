@@ -14,6 +14,8 @@ CLI for scheduling and posting to **X** using the X API v2, with a [Bubble Tea](
 | `postx daemon` | Poll on an interval and run `flush` logic |
 | `postx cancel ID` | Soft-cancel a **pending** post |
 
+In **`postx status`**: **←/→** or **h/l** moves the selected day by one; **↑/↓** or **j/k** moves by one week; **`[` / `]`** changes month; **`t`** jumps to today (UTC).
+
 Data lives under `$XDG_CONFIG_HOME/postcli` (fallback: `~/.config/postcli`): `queue.db`, `oauth.json`.
 
 ## Environment
