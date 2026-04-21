@@ -38,6 +38,9 @@ func cmdDaemon() *cobra.Command {
 				TokenPath:  config.TokenPath(),
 				DryRun:     DryRun(),
 			}
+			if err := ensurePostingReady(ctx, client); err != nil {
+				return err
+			}
 			r := &schedule.Runner{Store: st, Poster: client}
 			t := time.NewTicker(interval)
 			defer t.Stop()

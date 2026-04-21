@@ -317,7 +317,7 @@ func (m model) submitCmd() tea.Cmd {
 		summary := fmt.Sprintf("Queued post #%d for %s", id, sched.Format(time.RFC3339))
 		if m.whenCursor == 0 {
 			if err := m.runner.FlushDue(ctx, time.Now().UTC()); err != nil {
-				return submitErrMsg{err: fmt.Errorf("post to X failed: %w", err)}
+				return submitErrMsg{err: fmt.Errorf("%s", xapi.UserMessage(err))}
 			}
 			post, err := m.store.GetPost(ctx, id)
 			if err != nil {
@@ -328,9 +328,9 @@ func (m model) submitCmd() tea.Cmd {
 				if msg == "" {
 					msg = fmt.Sprintf("post stayed %s (not published)", post.Status)
 				}
-				return submitErrMsg{err: fmt.Errorf("%s", msg)}
+				return submitErrMsg{err: fmt.Errorf("%s", xapi.UserMessage(fmt.Errorf("%s", msg)))}
 			}
-			summary = fmt.Sprintf("Posted #%d (tweet %s)", id, post.TweetID)
+			summary = fmt.Sprintf("Success: posted #%d to X (tweet %s).", id, post.TweetID)
 		}
 		return submitErrMsg{summary: summary}
 	}

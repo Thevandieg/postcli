@@ -32,6 +32,9 @@ func cmdFlush() *cobra.Command {
 				TokenPath:  config.TokenPath(),
 				DryRun:     DryRun(),
 			}
+			if err := ensurePostingReady(ctx, client); err != nil {
+				return err
+			}
 			r := &schedule.Runner{Store: st, Poster: client}
 			if err := r.FlushDue(ctx, nowUTC()); err != nil {
 				return err

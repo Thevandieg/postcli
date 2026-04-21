@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"postcli/internal/store"
+	"postcli/internal/xapi"
 )
 
 // Poster creates tweets (implemented by xapi.Client).
@@ -30,17 +31,20 @@ func (r *Runner) FlushDue(ctx context.Context, now time.Time) error {
 	}
 	var errs []error
 	for _, p := range posts {
-		if err := r.processOne(ctx, p); err != nil {
+		tweetID, err := r.processOne(ctx, p)
+		if err != nil {
 			fmt.Fprintf(os.Stderr, "postx: post %d: %v\n", p.ID, err)
 			errs = append(errs, fmt.Errorf("post %d: %w", p.ID, err))
+			continue
 		}
+		fmt.Fprintf(os.Stderr, "postx: post %d posted successfully (tweet %s)\n", p.ID, tweetID)
 	}
 	return errors.Join(errs...)
 }
 
-func (r *Runner) processOne(ctx context.Context, p store.Post) error {
+func (r *Runner) processOne(ctx context.Context, p store.Post) (string, error) {
 	if err := r.Store.MarkPosting(ctx, p.ID); err != nil {
-		return err
+		return "", err
 	}
 	var tweetID string
 	var err error
@@ -53,8 +57,15 @@ func (r *Runner) processOne(ctx context.Context, p store.Post) error {
 		err = fmt.Errorf("unknown kind %q", p.Kind)
 	}
 	if err != nil {
-		_ = r.Store.MarkFailed(ctx, p.ID, err.Error())
-		return err
+		msg := xapi.UserMessage(err)
+		if msg == "" {
+			msg = err.Error()
+		}
+		_ = r.Store.MarkFailed(ctx, p.ID, msg)
+		return "", fmt.Errorf("%s", msg)
 	}
-	return r.Store.MarkPosted(ctx, p.ID, tweetID)
+	if err := r.Store.MarkPosted(ctx, p.ID, tweetID); err != nil {
+		return "", err
+	}
+	return tweetID, nil
 }

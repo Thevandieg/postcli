@@ -3,7 +3,9 @@ package xapi
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -25,6 +27,18 @@ type Client struct {
 	DryRun     bool
 }
 
+// APIError captures non-2xx responses returned by X.
+type APIError struct {
+	Op         string
+	StatusCode int
+	Status     string
+	Body       string
+}
+
+func (e *APIError) Error() string {
+	return fmt.Sprintf("%s %s: %s", e.Op, e.Status, strings.TrimSpace(e.Body))
+}
+
 func (c *Client) effectiveHTTP() *http.Client {
 	if c.HTTP != nil {
 		return c.HTTP
@@ -32,13 +46,56 @@ func (c *Client) effectiveHTTP() *http.Client {
 	return apiHTTPClient
 }
 
+func (c *Client) validateCredentials() error {
+	if c.DryRun {
+		return nil
+	}
+	if strings.TrimSpace(c.OAuth.ClientID) == "" {
+		return fmt.Errorf("POSTX_CLIENT_ID is required")
+	}
+	if strings.TrimSpace(c.OAuth.ClientSecret) == "" {
+		return fmt.Errorf("POSTX_CLIENT_SECRET is required")
+	}
+	return nil
+}
+
+// CheckReady validates the minimum requirements needed to post.
+func (c *Client) CheckReady(ctx context.Context) error {
+	if err := c.validateCredentials(); err != nil {
+		return err
+	}
+	if c.DryRun {
+		return nil
+	}
+	if c.TokenStore == nil {
+		return fmt.Errorf("token store is not configured")
+	}
+	_, err := c.TokenStore.LoadOAuth(ctx)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return fmt.Errorf("not logged in: %w", err)
+		}
+		return fmt.Errorf("load oauth: %w", err)
+	}
+	return nil
+}
+
 // AccessToken returns a valid access token, refreshing if needed.
 func (c *Client) AccessToken(ctx context.Context) (string, error) {
+	if err := c.validateCredentials(); err != nil {
+		return "", err
+	}
 	if c.DryRun {
 		return "dry-run", nil
 	}
+	if c.TokenStore == nil {
+		return "", fmt.Errorf("token store is not configured")
+	}
 	t, err := c.TokenStore.LoadOAuth(ctx)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", fmt.Errorf("not logged in: %w", err)
+		}
 		return "", fmt.Errorf("load oauth: %w", err)
 	}
 	if t.RefreshToken == "" {
@@ -138,7 +195,12 @@ func (c *Client) postTweet(ctx context.Context, jsonBody []byte) (string, error)
 	defer resp.Body.Close()
 	raw, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return "", fmt.Errorf("create tweet %s: %s", resp.Status, strings.TrimSpace(string(raw)))
+		return "", &APIError{
+			Op:         "create tweet",
+			StatusCode: resp.StatusCode,
+			Status:     resp.Status,
+			Body:       strings.TrimSpace(string(raw)),
+		}
 	}
 	var out createTweetResponse
 	if err := json.Unmarshal(raw, &out); err != nil {

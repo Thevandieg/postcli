@@ -45,6 +45,29 @@ Posting requires API access that allows creating tweets (per X’s current produ
 go build -o postx ./cmd/postx
 ```
 
+## Troubleshooting posting
+
+When `postx post`, `postx flush`, or `postx daemon` cannot publish to X, use these messages:
+
+- **`cannot post yet: Missing POSTX_CLIENT_ID`**  
+  Set `POSTX_CLIENT_ID` to your OAuth 2.0 client ID from the X portal.
+- **`cannot post yet: Missing POSTX_CLIENT_SECRET`**  
+  Set `POSTX_CLIENT_SECRET` to your app’s OAuth 2.0 client secret.
+- **`cannot post yet: You are not logged in`**  
+  Run `postx login` first, then retry posting.
+- **`X rejected this request as unauthorized (401)`**  
+  Re-check `POSTX_CLIENT_ID` / `POSTX_CLIENT_SECRET` and run `postx login` again.
+- **`X API returned 402 Payment Required`**  
+  Your X API project likely needs billing/payment enabled or a higher tier; add payment method in the X portal and retry.
+- **`X rejected this request (403 Forbidden)`**  
+  Confirm your app has `tweet.write` and the required product access.
+- **`X rate limit reached (429)`**  
+  Wait and retry later.
+
+On immediate posting, success feedback now includes the tweet ID:
+
+- `Success: posted #<local_post_id> to X (tweet <tweet_id>).`
+
 ## systemd user timer (flush every minute)
 
 Replace `/path/to/postx` and ensure `POSTX_CLIENT_ID` (and other env vars) are available to the service (e.g. an `EnvironmentFile`).
