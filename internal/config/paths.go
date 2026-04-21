@@ -30,6 +30,11 @@ func TokenPath() string {
 	return filepath.Join(Dir(), "oauth.json")
 }
 
+// EnvPath returns the persisted env vars file path.
+func EnvPath() string {
+	return filepath.Join(Dir(), "env")
+}
+
 // ThemePath returns the active theme name (one line, e.g. "violet").
 func ThemePath() string {
 	return filepath.Join(Dir(), "theme")

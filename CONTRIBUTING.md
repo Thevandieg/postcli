@@ -27,7 +27,7 @@ go install ./cmd/postx
 ## Project layout
 
 | Path | Role |
-|------|------|
+| ---- | ---- |
 | [`cmd/postx`](cmd/postx) | Program entrypoint |
 | [`internal/cli`](internal/cli) | Cobra commands |
 | [`internal/config`](internal/config) | Config paths (XDG, theme file, DB, tokens) |
@@ -37,6 +37,7 @@ go install ./cmd/postx
 | [`internal/theme`](internal/theme) | TUI color presets and persistence |
 | [`internal/tui/post`](internal/tui/post) | Compose wizard (Bubble Tea) |
 | [`internal/tui/status`](internal/tui/status) | Calendar status view (Bubble Tea) |
+| [`internal/tui/channelsui`](internal/tui/channelsui) | Interactive channel browser (`postx channels`) |
 | [`internal/channels`](internal/channels) | Channel catalog for the post wizard (X + preview destinations) |
 
 ## Tests and quality

@@ -5,11 +5,13 @@ CLI for scheduling and posting to **X** using the X API v2, with a [Bubble Tea](
 ## Commands
 
 | Command | Description |
-|--------|-------------|
+| -------- | ------------- |
+| `postx channels` | Interactive list: navigate channels, **Enter** to configure (X) or see preview-only notice |
+| `postx channels configure [x]` | Non-interactive configure: credentials, persist to `env`, shell profile, then login |
 | `postx login` | OAuth 2.0 with PKCE (opens browser; local callback server) |
 | `postx logout` | Remove stored tokens |
 | `postx status` | Calendar + detail pane for scheduled posts |
-| `postx post` | Interactive flow: compose → content type → **channels** → schedule / post now (X live; others preview) |
+| `postx post` | Interactive flow: content type → compose → **channels** → schedule / post now (X live; others preview) |
 | `postx flush` | Process all due posts once (for cron or systemd) |
 | `postx daemon` | Poll on an interval and run `flush` logic |
 | `postx cancel ID` | Soft-cancel a **pending** post |
@@ -19,18 +21,20 @@ CLI for scheduling and posting to **X** using the X API v2, with a [Bubble Tea](
 
 In **`postx status`**: **←/→** or **h/l** moves the selected day by one; **↑/↓** or **j/k** moves by one week; **`[` / `]`** changes month; **`t`** jumps to today (UTC).
 
-Data lives under `$XDG_CONFIG_HOME/postcli` (fallback: `~/.config/postcli`): `queue.db`, `oauth.json`.
+Data lives under `$XDG_CONFIG_HOME/postcli` (fallback: `~/.config/postcli`): `queue.db`, `oauth.json`, `env`.
 
 **`postx post` steps:** choose **content type** (text-only or text + image), write the body, pick an image if needed, then pick one or more **channels** (only **X** publishes today; Mastodon, Bluesky, and Threads are preview placeholders), then choose immediate post or a scheduled time. Each selected channel gets its **own queue row** (same text, time, and media path).
 
 ## Environment
 
 | Variable | Meaning |
-|----------|---------|
+| ---------- | --------- |
 | `POSTX_CLIENT_ID` | OAuth 2.0 client ID from the X developer portal |
 | `POSTX_CLIENT_SECRET` | **Often required:** X’s token URL expects an `Authorization: Basic` header. Use the **OAuth 2.0 Client Secret** from your app (not the old API Key Secret unless that’s what the portal shows for OAuth 2). If login still fails with `401` / `invalid_client`, ensure this matches the portal exactly. |
 | `POSTX_REDIRECT_URI` | Default `http://127.0.0.1:8080/callback` — must match the app settings exactly |
 | `POSTX_DRY_RUN` | If `1` / `true`, log tweet payloads and skip HTTP (no API calls) |
+
+`postx channels configure x` stores these values in `$XDG_CONFIG_HOME/postcli/env` and also writes them to your active shell profile (`.zshrc`, `.bashrc`, or fish config) so future sessions pick them up automatically.
 
 ## X developer setup
 
@@ -51,12 +55,12 @@ go build -o postx ./cmd/postx
 
 When `postx post`, `postx flush`, or `postx daemon` cannot publish to X, use these messages:
 
-- **`cannot post yet: Missing POSTX_CLIENT_ID`**  
+- **`Missing POSTX_CLIENT_ID`**  
   Set `POSTX_CLIENT_ID` to your OAuth 2.0 client ID from the X portal.
-- **`cannot post yet: Missing POSTX_CLIENT_SECRET`**  
+- **`Missing POSTX_CLIENT_SECRET`**  
   Set `POSTX_CLIENT_SECRET` to your app’s OAuth 2.0 client secret.
-- **`cannot post yet: You are not logged in`**  
-  Run `postx login` first, then retry posting.
+- **`You are not logged in`**  
+  Run `postx channels configure x` (or `postx login`) then retry posting.
 - **`X rejected this request as unauthorized (401)`**  
   Re-check `POSTX_CLIENT_ID` / `POSTX_CLIENT_SECRET` and run `postx login` again.
 - **`X API returned 402 Payment Required`**  

@@ -35,9 +35,6 @@ func cmdPost() *cobra.Command {
 				TokenPath:  config.TokenPath(),
 				DryRun:     DryRun(),
 			}
-			if err := ensurePostingReady(ctx, client); err != nil {
-				return err
-			}
 			poster := &schedule.XChannelPoster{X: client}
 			runner := &schedule.Runner{Store: st, Poster: poster}
 			return post.Run(st, runner)
