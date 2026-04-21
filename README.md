@@ -9,7 +9,7 @@ CLI for scheduling and posting to **X** using the X API v2, with a [Bubble Tea](
 | `postx login` | OAuth 2.0 with PKCE (opens browser; local callback server) |
 | `postx logout` | Remove stored tokens |
 | `postx status` | Calendar + detail pane for scheduled posts |
-| `postx post` | Interactive compose flow (text or text + image path) |
+| `postx post` | Interactive flow: compose → content type → **channels** → schedule / post now (X live; others preview) |
 | `postx flush` | Process all due posts once (for cron or systemd) |
 | `postx daemon` | Poll on an interval and run `flush` logic |
 | `postx cancel ID` | Soft-cancel a **pending** post |
@@ -20,6 +20,8 @@ CLI for scheduling and posting to **X** using the X API v2, with a [Bubble Tea](
 In **`postx status`**: **←/→** or **h/l** moves the selected day by one; **↑/↓** or **j/k** moves by one week; **`[` / `]`** changes month; **`t`** jumps to today (UTC).
 
 Data lives under `$XDG_CONFIG_HOME/postcli` (fallback: `~/.config/postcli`): `queue.db`, `oauth.json`.
+
+**`postx post` steps:** choose **content type** (text-only or text + image), write the body, pick an image if needed, then pick one or more **channels** (only **X** publishes today; Mastodon, Bluesky, and Threads are preview placeholders), then choose immediate post or a scheduled time. Each selected channel gets its **own queue row** (same text, time, and media path).
 
 ## Environment
 

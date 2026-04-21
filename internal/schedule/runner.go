@@ -11,10 +11,10 @@ import (
 	"postcli/internal/xapi"
 )
 
-// Poster creates tweets (implemented by xapi.Client).
+// Poster publishes content to a specific channel (implemented by XChannelPoster).
 type Poster interface {
-	PostText(ctx context.Context, text string) (tweetID string, err error)
-	PostTextWithMedia(ctx context.Context, text string, mediaPath string) (tweetID string, err error)
+	PostText(ctx context.Context, ch store.Channel, text string) (remoteID string, err error)
+	PostTextWithMedia(ctx context.Context, ch store.Channel, text string, mediaPath string) (remoteID string, err error)
 }
 
 // Runner processes due posts using a Poster.
@@ -50,9 +50,9 @@ func (r *Runner) processOne(ctx context.Context, p store.Post) (string, error) {
 	var err error
 	switch p.Kind {
 	case store.KindText:
-		tweetID, err = r.Poster.PostText(ctx, p.Payload.Text)
+		tweetID, err = r.Poster.PostText(ctx, p.Channel, p.Payload.Text)
 	case store.KindTextWithMedia:
-		tweetID, err = r.Poster.PostTextWithMedia(ctx, p.Payload.Text, p.Payload.MediaPath)
+		tweetID, err = r.Poster.PostTextWithMedia(ctx, p.Channel, p.Payload.Text, p.Payload.MediaPath)
 	default:
 		err = fmt.Errorf("unknown kind %q", p.Kind)
 	}

@@ -130,7 +130,7 @@ func (m *model) refreshDetail() {
 	} else {
 		x := theme.Current()
 		for _, p := range posts {
-			b.WriteString(lipgloss.NewStyle().Bold(true).Foreground(x.Accent).Render(fmt.Sprintf("#%d · %s · %s", p.ID, p.Kind, p.Status)))
+			b.WriteString(lipgloss.NewStyle().Bold(true).Foreground(x.Accent).Render(fmt.Sprintf("#%d · %s · %s · %s", p.ID, p.Channel.Label(), p.Kind, p.Status)))
 			b.WriteString("\n")
 			b.WriteString(lipgloss.NewStyle().Foreground(x.Muted).Render(fmt.Sprintf("  %s UTC", p.ScheduledAt.UTC().Format("15:04:05"))) + "\n")
 			if p.TweetID != "" {

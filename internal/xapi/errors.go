@@ -40,6 +40,8 @@ func UserMessage(err error) string {
 		return "Missing POSTX_CLIENT_SECRET. Set your X OAuth client secret in the environment first."
 	case strings.Contains(lower, "not logged in"):
 		return "You are not logged in. Run `postx login` before posting."
+	case strings.Contains(lower, "unsupported channel"), strings.Contains(lower, "integration not available"):
+		return "That channel is not available in postx yet. Only X (Twitter) can publish today; others are preview-only."
 	case strings.Contains(lower, "token refresh: 401"), strings.Contains(lower, "token exchange: 401"):
 		return "X rejected your app credentials (401). Verify POSTX_CLIENT_ID and POSTX_CLIENT_SECRET, then run `postx login` again."
 	case strings.Contains(lower, "payment required"), strings.Contains(lower, " 402 "):

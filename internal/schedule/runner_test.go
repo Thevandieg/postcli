@@ -14,14 +14,14 @@ type fakePoster struct {
 	err error
 }
 
-func (f fakePoster) PostText(ctx context.Context, text string) (string, error) {
+func (f fakePoster) PostText(ctx context.Context, ch store.Channel, text string) (string, error) {
 	if f.err != nil {
 		return "", f.err
 	}
 	return f.id, nil
 }
 
-func (f fakePoster) PostTextWithMedia(ctx context.Context, text string, mediaPath string) (string, error) {
+func (f fakePoster) PostTextWithMedia(ctx context.Context, ch store.Channel, text string, mediaPath string) (string, error) {
 	if f.err != nil {
 		return "", f.err
 	}
@@ -38,7 +38,7 @@ func TestRunnerPosted(t *testing.T) {
 	st := store.NewStore(db)
 
 	when := time.Now().UTC().Add(-time.Minute)
-	id, err := st.InsertPost(ctx, store.KindText, store.PostPayload{Text: "hi"}, when, store.StatusPending, "")
+	id, err := st.InsertPost(ctx, store.ChannelX, store.KindText, store.PostPayload{Text: "hi"}, when, store.StatusPending, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,7 +78,7 @@ func TestRunnerFailed(t *testing.T) {
 	defer db.Close()
 	st := store.NewStore(db)
 	when := time.Now().UTC().Add(-time.Minute)
-	id, err := st.InsertPost(ctx, store.KindText, store.PostPayload{Text: "x"}, when, store.StatusPending, "")
+	id, err := st.InsertPost(ctx, store.ChannelX, store.KindText, store.PostPayload{Text: "x"}, when, store.StatusPending, "")
 	if err != nil {
 		t.Fatal(err)
 	}

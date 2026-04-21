@@ -35,6 +35,7 @@ type PostPayload struct {
 type Post struct {
 	ID               int64
 	Kind             PostKind
+	Channel          Channel
 	Payload          PostPayload
 	ScheduledAt      time.Time
 	Status           PostStatus
@@ -44,16 +45,16 @@ type Post struct {
 	CreatedAt        time.Time
 }
 
-func (s *Store) InsertPost(ctx context.Context, kind PostKind, payload PostPayload, scheduledAt time.Time, status PostStatus, idempotencyKey string) (int64, error) {
+func (s *Store) InsertPost(ctx context.Context, channel Channel, kind PostKind, payload PostPayload, scheduledAt time.Time, status PostStatus, idempotencyKey string) (int64, error) {
 	b, err := json.Marshal(payload)
 	if err != nil {
 		return 0, err
 	}
 	now := time.Now().UTC()
 	res, err := s.db.ExecContext(ctx, `
-		INSERT INTO posts (kind, payload, scheduled_at, status, idempotency_key, last_error, tweet_id, created_at)
-		VALUES (?, ?, ?, ?, ?, '', '', ?)
-	`, string(kind), string(b), scheduledAt.UTC().Format(time.RFC3339), string(status), nullIfEmpty(idempotencyKey), now.Format(time.RFC3339))
+		INSERT INTO posts (kind, channel, payload, scheduled_at, status, idempotency_key, last_error, tweet_id, created_at)
+		VALUES (?, ?, ?, ?, ?, ?, '', '', ?)
+	`, string(kind), string(channel), string(b), scheduledAt.UTC().Format(time.RFC3339), string(status), nullIfEmpty(idempotencyKey), now.Format(time.RFC3339))
 	if err != nil {
 		return 0, err
 	}
@@ -71,7 +72,7 @@ func (s *Store) ListPostsForDay(ctx context.Context, day time.Time) ([]Post, err
 	start := time.Date(day.Year(), day.Month(), day.Day(), 0, 0, 0, 0, time.UTC)
 	end := start.Add(24 * time.Hour)
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT id, kind, payload, scheduled_at, status, idempotency_key, last_error, tweet_id, created_at
+		SELECT id, kind, channel, payload, scheduled_at, status, idempotency_key, last_error, tweet_id, created_at
 		FROM posts
 		WHERE scheduled_at >= ? AND scheduled_at < ? AND status != 'cancelled'
 		ORDER BY scheduled_at
@@ -88,7 +89,7 @@ func (s *Store) ListPostsInMonth(ctx context.Context, month time.Time) ([]Post, 
 	start := time.Date(month.Year(), month.Month(), 1, 0, 0, 0, 0, time.UTC)
 	end := start.AddDate(0, 1, 0)
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT id, kind, payload, scheduled_at, status, idempotency_key, last_error, tweet_id, created_at
+		SELECT id, kind, channel, payload, scheduled_at, status, idempotency_key, last_error, tweet_id, created_at
 		FROM posts
 		WHERE scheduled_at >= ? AND scheduled_at < ? AND status != 'cancelled'
 		ORDER BY scheduled_at
@@ -102,7 +103,7 @@ func (s *Store) ListPostsInMonth(ctx context.Context, month time.Time) ([]Post, 
 
 func (s *Store) ListPendingInRange(ctx context.Context, from, to time.Time) ([]Post, error) {
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT id, kind, payload, scheduled_at, status, idempotency_key, last_error, tweet_id, created_at
+		SELECT id, kind, channel, payload, scheduled_at, status, idempotency_key, last_error, tweet_id, created_at
 		FROM posts
 		WHERE scheduled_at >= ? AND scheduled_at < ? AND status IN ('pending', 'posting', 'failed')
 		ORDER BY scheduled_at
@@ -116,20 +117,21 @@ func (s *Store) ListPendingInRange(ctx context.Context, from, to time.Time) ([]P
 
 func scanPostRow(row *sql.Row) (Post, error) {
 	var (
-		p                        Post
-		kind, pay, sched, stat   string
-		idemNull                 sql.NullString
+		p                         Post
+		kind, ch, pay, sched, stat string
+		idemNull                  sql.NullString
 		lastErr, tweetID, created string
 	)
-	err := row.Scan(&p.ID, &kind, &pay, &sched, &stat, &idemNull, &lastErr, &tweetID, &created)
+	err := row.Scan(&p.ID, &kind, &ch, &pay, &sched, &stat, &idemNull, &lastErr, &tweetID, &created)
 	if err != nil {
 		return Post{}, err
 	}
-	return assemblePost(p, kind, pay, sched, stat, idemNull, lastErr, tweetID, created)
+	return assemblePost(p, kind, ch, pay, sched, stat, idemNull, lastErr, tweetID, created)
 }
 
-func assemblePost(p Post, kind, pay, sched, stat string, idemNull sql.NullString, lastErr, tweetID, created string) (Post, error) {
+func assemblePost(p Post, kind, ch, pay, sched, stat string, idemNull sql.NullString, lastErr, tweetID, created string) (Post, error) {
 	p.Kind = PostKind(kind)
+	p.Channel = Channel(ch)
 	if err := json.Unmarshal([]byte(pay), &p.Payload); err != nil {
 		return Post{}, err
 	}
@@ -155,15 +157,15 @@ func scanPosts(rows *sql.Rows) ([]Post, error) {
 	var out []Post
 	for rows.Next() {
 		var (
-			p                        Post
-			kind, pay, sched, stat   string
-			idemNull                 sql.NullString
-			lastErr, tweetID, created string
+			p                          Post
+			kind, ch, pay, sched, stat string
+			idemNull                   sql.NullString
+			lastErr, tweetID, created  string
 		)
-		if err := rows.Scan(&p.ID, &kind, &pay, &sched, &stat, &idemNull, &lastErr, &tweetID, &created); err != nil {
+		if err := rows.Scan(&p.ID, &kind, &ch, &pay, &sched, &stat, &idemNull, &lastErr, &tweetID, &created); err != nil {
 			return nil, err
 		}
-		p, err := assemblePost(p, kind, pay, sched, stat, idemNull, lastErr, tweetID, created)
+		p, err := assemblePost(p, kind, ch, pay, sched, stat, idemNull, lastErr, tweetID, created)
 		if err != nil {
 			return nil, err
 		}
@@ -175,7 +177,7 @@ func scanPosts(rows *sql.Rows) ([]Post, error) {
 // GetPost returns one post by id.
 func (s *Store) GetPost(ctx context.Context, id int64) (Post, error) {
 	row := s.db.QueryRowContext(ctx, `
-		SELECT id, kind, payload, scheduled_at, status, idempotency_key, last_error, tweet_id, created_at
+		SELECT id, kind, channel, payload, scheduled_at, status, idempotency_key, last_error, tweet_id, created_at
 		FROM posts WHERE id = ?
 	`, id)
 	p, err := scanPostRow(row)
@@ -190,7 +192,7 @@ func (s *Store) GetPost(ctx context.Context, id int64) (Post, error) {
 
 func (s *Store) ListDuePending(ctx context.Context, now time.Time, limit int) ([]Post, error) {
 	rows, err := s.db.QueryContext(ctx, `
-		SELECT id, kind, payload, scheduled_at, status, idempotency_key, last_error, tweet_id, created_at
+		SELECT id, kind, channel, payload, scheduled_at, status, idempotency_key, last_error, tweet_id, created_at
 		FROM posts
 		WHERE status = 'pending' AND scheduled_at <= ?
 		ORDER BY scheduled_at

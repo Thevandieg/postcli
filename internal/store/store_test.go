@@ -17,7 +17,7 @@ func TestInsertAndListMonth(t *testing.T) {
 
 	payload := PostPayload{Text: "hello"}
 	at := time.Date(2026, 4, 21, 15, 30, 0, 0, time.UTC)
-	id, err := s.InsertPost(ctx, KindText, payload, at, StatusPending, "k1")
+	id, err := s.InsertPost(ctx, ChannelX, KindText, payload, at, StatusPending, "k1")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -49,11 +49,11 @@ func TestDuePending(t *testing.T) {
 
 	past := time.Now().UTC().Add(-time.Hour)
 	future := time.Now().UTC().Add(time.Hour)
-	_, err = s.InsertPost(ctx, KindText, PostPayload{Text: "a"}, past, StatusPending, "")
+	_, err = s.InsertPost(ctx, ChannelX, KindText, PostPayload{Text: "a"}, past, StatusPending, "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = s.InsertPost(ctx, KindText, PostPayload{Text: "b"}, future, StatusPending, "")
+	_, err = s.InsertPost(ctx, ChannelX, KindText, PostPayload{Text: "b"}, future, StatusPending, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -75,7 +75,7 @@ func TestGetPost(t *testing.T) {
 	}
 	defer db.Close()
 	s := NewStore(db)
-	id, err := s.InsertPost(ctx, KindText, PostPayload{Text: "x"}, time.Now().UTC(), StatusPending, "")
+	id, err := s.InsertPost(ctx, ChannelX, KindText, PostPayload{Text: "x"}, time.Now().UTC(), StatusPending, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -96,7 +96,7 @@ func TestCancel(t *testing.T) {
 	}
 	defer db.Close()
 	s := NewStore(db)
-	id, err := s.InsertPost(ctx, KindText, PostPayload{Text: "x"}, time.Now().UTC(), StatusPending, "")
+	id, err := s.InsertPost(ctx, ChannelX, KindText, PostPayload{Text: "x"}, time.Now().UTC(), StatusPending, "")
 	if err != nil {
 		t.Fatal(err)
 	}

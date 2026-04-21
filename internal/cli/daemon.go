@@ -41,7 +41,8 @@ func cmdDaemon() *cobra.Command {
 			if err := ensurePostingReady(ctx, client); err != nil {
 				return err
 			}
-			r := &schedule.Runner{Store: st, Poster: client}
+			poster := &schedule.XChannelPoster{X: client}
+			r := &schedule.Runner{Store: st, Poster: poster}
 			t := time.NewTicker(interval)
 			defer t.Stop()
 			for {

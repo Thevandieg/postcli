@@ -116,14 +116,16 @@ func stepLabel(s step) string {
 	switch s {
 	case stepKind:
 		return "Content type"
-	case stepWhen:
-		return "When to post"
-	case stepSchedule:
-		return "Schedule"
 	case stepBody:
 		return "Compose"
 	case stepMedia:
 		return "Media file"
+	case stepChannels:
+		return "Channels"
+	case stepWhen:
+		return "When to post"
+	case stepSchedule:
+		return "Schedule"
 	case stepConfirm:
 		return "Confirm"
 	default:
@@ -135,16 +137,18 @@ func stepIndex(s step) int {
 	switch s {
 	case stepKind:
 		return 1
-	case stepWhen:
-		return 2
-	case stepSchedule:
-		return 3
 	case stepBody:
-		return 4
+		return 2
 	case stepMedia:
+		return 3
+	case stepChannels:
+		return 4
+	case stepWhen:
 		return 5
-	case stepConfirm:
+	case stepSchedule:
 		return 6
+	case stepConfirm:
+		return 7
 	default:
 		return 0
 	}
@@ -152,7 +156,7 @@ func stepIndex(s step) int {
 
 func progressDots(s step) string {
 	x := p()
-	const n = 6
+	const n = 7
 	idx := stepIndex(s)
 	if idx < 1 {
 		idx = 1

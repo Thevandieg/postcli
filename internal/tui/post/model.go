@@ -14,9 +14,10 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
+	"postcli/internal/channels"
 	"postcli/internal/schedule"
-	"postcli/internal/theme"
 	"postcli/internal/store"
+	"postcli/internal/theme"
 	"postcli/internal/xapi"
 )
 
@@ -24,10 +25,11 @@ type step int
 
 const (
 	stepKind step = iota
-	stepWhen
-	stepSchedule
 	stepBody
 	stepMedia
+	stepChannels
+	stepWhen
+	stepSchedule
 	stepConfirm
 )
 
@@ -37,13 +39,15 @@ type model struct {
 	kindCursor int
 	whenCursor int // 0 now, 1 schedule
 
+	channelCursor int
+	channelSel    map[store.Channel]bool
+
 	scheduleInput textinput.Model
 	body          textarea.Model
 	picker        filepicker.Model
 	spinner       spinner.Model
 
 	store  *store.Store
-	client *xapi.Client
 	runner *schedule.Runner
 
 	width  int
@@ -55,7 +59,7 @@ type model struct {
 }
 
 // Run launches the post wizard TUI.
-func Run(st *store.Store, client *xapi.Client, runner *schedule.Runner) error {
+func Run(st *store.Store, runner *schedule.Runner) error {
 	_ = theme.Load()
 	ti := textinput.New()
 	ti.Placeholder = "2006-01-02 15:04 (local)"
@@ -75,6 +79,9 @@ func Run(st *store.Store, client *xapi.Client, runner *schedule.Runner) error {
 	sp := spinner.New()
 	applyBubbleStyles(&ti, &ta, &fp, &sp)
 
+	chSel := make(map[store.Channel]bool)
+	chSel[store.ChannelX] = true
+
 	m := model{
 		step:          stepKind,
 		scheduleInput: ti,
@@ -82,8 +89,8 @@ func Run(st *store.Store, client *xapi.Client, runner *schedule.Runner) error {
 		picker:        fp,
 		spinner:       sp,
 		store:         st,
-		client:        client,
 		runner:        runner,
+		channelSel:    chSel,
 	}
 	p := tea.NewProgram(m)
 	_, err := p.Run()
@@ -149,18 +156,43 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch m.step {
 	case stepKind:
 		return m.updateKind(msg)
-	case stepWhen:
-		return m.updateWhen(msg)
-	case stepSchedule:
-		return m.updateSchedule(msg)
 	case stepBody:
 		return m.updateBody(msg)
 	case stepMedia:
 		return m.updateMedia(msg)
+	case stepChannels:
+		return m.updateChannels(msg)
+	case stepWhen:
+		return m.updateWhen(msg)
+	case stepSchedule:
+		return m.updateSchedule(msg)
 	case stepConfirm:
 		return m.updateConfirm(msg)
 	}
 	return m, nil
+}
+
+func (m model) updateBody(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if k, ok := msg.(tea.KeyPressMsg); ok {
+		if k.String() == "ctrl+d" {
+			txt := strings.TrimSpace(m.body.Value())
+			if txt == "" {
+				m.err = "text required"
+				return m, nil
+			}
+			m.err = ""
+			if m.kindCursor == 1 {
+				m.step = stepMedia
+				m.picker.Path = ""
+				return m, m.picker.Init()
+			}
+			m.step = stepChannels
+			return m, nil
+		}
+	}
+	var cmd tea.Cmd
+	m.body, cmd = m.body.Update(msg)
+	return m, cmd
 }
 
 func (m model) updateKind(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -177,6 +209,91 @@ func (m model) updateKind(msg tea.Msg) (tea.Model, tea.Cmd) {
 			}
 			return m, nil
 		case "enter":
+			m.err = ""
+			m.step = stepBody
+			m.body.Focus()
+			return m, blinkTA()
+		}
+	}
+	return m, nil
+}
+
+func (m model) updateMedia(msg tea.Msg) (tea.Model, tea.Cmd) {
+	prevPath := m.picker.Path
+	var cmd tea.Cmd
+	m.picker, cmd = m.picker.Update(msg)
+	if m.picker.Path != "" && m.picker.Path != prevPath {
+		m.step = stepChannels
+		return m, nil
+	}
+	return m, cmd
+}
+
+func (m model) countSelectedChannels() int {
+	n := 0
+	for _, e := range channels.Catalog() {
+		if !e.Selectable {
+			continue
+		}
+		if m.channelSel[e.ID] {
+			n++
+		}
+	}
+	return n
+}
+
+func (m model) selectedChannels() []store.Channel {
+	var out []store.Channel
+	for _, e := range channels.Catalog() {
+		if !e.Selectable {
+			continue
+		}
+		if m.channelSel[e.ID] {
+			out = append(out, e.ID)
+		}
+	}
+	return out
+}
+
+func (m model) updateChannels(msg tea.Msg) (tea.Model, tea.Cmd) {
+	cat := channels.Catalog()
+	if k, ok := msg.(tea.KeyPressMsg); ok {
+		switch k.String() {
+		case "up", "k":
+			if m.channelCursor > 0 {
+				m.channelCursor--
+			}
+			m.err = ""
+			return m, nil
+		case "down", "j":
+			if m.channelCursor < len(cat)-1 {
+				m.channelCursor++
+			}
+			m.err = ""
+			return m, nil
+		case " ":
+			e := cat[m.channelCursor]
+			if !e.Selectable {
+				m.err = "That destination is preview-only for now (not queued)."
+				return m, nil
+			}
+			if m.channelSel[e.ID] {
+				if m.countSelectedChannels() <= 1 {
+					m.err = "Select at least one channel."
+					return m, nil
+				}
+				delete(m.channelSel, e.ID)
+			} else {
+				m.channelSel[e.ID] = true
+			}
+			m.err = ""
+			return m, nil
+		case "enter":
+			if m.countSelectedChannels() == 0 {
+				m.err = "Select at least one channel."
+				return m, nil
+			}
+			m.err = ""
 			m.step = stepWhen
 			return m, nil
 		}
@@ -203,9 +320,8 @@ func (m model) updateWhen(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.scheduleInput.Focus()
 				return m, blinkInput()
 			}
-			m.step = stepBody
-			m.body.Focus()
-			return m, blinkTA()
+			m.step = stepConfirm
+			return m, nil
 		}
 	}
 	return m, nil
@@ -220,9 +336,8 @@ func (m model) updateSchedule(msg tea.Msg) (tea.Model, tea.Cmd) {
 				return m, nil
 			}
 			m.err = ""
-			m.step = stepBody
-			m.body.Focus()
-			return m, blinkTA()
+			m.step = stepConfirm
+			return m, nil
 		}
 	}
 	var cmd tea.Cmd
@@ -230,47 +345,17 @@ func (m model) updateSchedule(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return m, cmd
 }
 
-func (m model) updateBody(msg tea.Msg) (tea.Model, tea.Cmd) {
-	if k, ok := msg.(tea.KeyPressMsg); ok {
-		if k.String() == "ctrl+d" {
-			txt := strings.TrimSpace(m.body.Value())
-			if txt == "" {
-				m.err = "text required"
-				return m, nil
-			}
-			m.err = ""
-			if m.kindCursor == 1 {
-				m.step = stepMedia
-				m.picker.Path = ""
-				return m, m.picker.Init()
-			}
-			m.step = stepConfirm
-			return m, nil
-		}
-	}
-	var cmd tea.Cmd
-	m.body, cmd = m.body.Update(msg)
-	return m, cmd
-}
-
-func (m model) updateMedia(msg tea.Msg) (tea.Model, tea.Cmd) {
-	prevPath := m.picker.Path
-	var cmd tea.Cmd
-	m.picker, cmd = m.picker.Update(msg)
-	if m.picker.Path != "" && m.picker.Path != prevPath {
-		m.step = stepConfirm
-		return m, nil
-	}
-	return m, cmd
-}
-
 func (m model) updateConfirm(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if k, ok := msg.(tea.KeyPressMsg); ok {
 		switch k.String() {
 		case "n", "left", "h":
-			m.step = stepBody
-			m.body.Focus()
-			return m, blinkTA()
+			if m.whenCursor == 1 {
+				m.step = stepSchedule
+				m.scheduleInput.Focus()
+				return m, blinkInput()
+			}
+			m.step = stepWhen
+			return m, nil
 		case "y", "enter":
 			m.err = ""
 			m.working = true
@@ -298,6 +383,10 @@ func (m model) submitCmd() tea.Cmd {
 		if kind == store.KindTextWithMedia {
 			payload.MediaPath = m.picker.Path
 		}
+		chosen := m.selectedChannels()
+		if len(chosen) == 0 {
+			return submitErrMsg{err: fmt.Errorf("no channels selected")}
+		}
 		var sched time.Time
 		var err error
 		if m.whenCursor == 0 {
@@ -310,30 +399,68 @@ func (m model) submitCmd() tea.Cmd {
 			sched = sched.UTC()
 		}
 		ctx := context.Background()
-		id, err := m.store.InsertPost(ctx, kind, payload, sched, store.StatusPending, "")
-		if err != nil {
-			return submitErrMsg{err: err}
-		}
-		summary := fmt.Sprintf("Queued post #%d for %s", id, sched.Format(time.RFC3339))
-		if m.whenCursor == 0 {
-			if err := m.runner.FlushDue(ctx, time.Now().UTC()); err != nil {
-				return submitErrMsg{err: fmt.Errorf("%s", xapi.UserMessage(err))}
-			}
-			post, err := m.store.GetPost(ctx, id)
+		var ids []int64
+		for _, ch := range chosen {
+			id, err := m.store.InsertPost(ctx, ch, kind, payload, sched, store.StatusPending, "")
 			if err != nil {
 				return submitErrMsg{err: err}
 			}
-			if post.Status != store.StatusPosted {
-				msg := strings.TrimSpace(post.LastError)
-				if msg == "" {
-					msg = fmt.Sprintf("post stayed %s (not published)", post.Status)
-				}
-				return submitErrMsg{err: fmt.Errorf("%s", xapi.UserMessage(fmt.Errorf("%s", msg)))}
-			}
-			summary = fmt.Sprintf("Success: posted #%d to X (tweet %s).", id, post.TweetID)
+			ids = append(ids, id)
 		}
-		return submitErrMsg{summary: summary}
+
+		if m.whenCursor == 1 {
+			return submitErrMsg{summary: formatQueuedSummary(ids, sched)}
+		}
+
+		if err := m.runner.FlushDue(ctx, time.Now().UTC()); err != nil {
+			// FlushDue may return joined errors; still inspect each row below.
+			_ = err
+		}
+		lines, anyPosted := m.summarizePosts(ctx, ids)
+		if !anyPosted {
+			return submitErrMsg{err: fmt.Errorf("%s", strings.Join(lines, "\n"))}
+		}
+		return submitErrMsg{summary: strings.Join(lines, "\n")}
 	}
+}
+
+func (m model) summarizePosts(ctx context.Context, ids []int64) (lines []string, anyPosted bool) {
+	for _, id := range ids {
+		post, err := m.store.GetPost(ctx, id)
+		if err != nil {
+			lines = append(lines, fmt.Sprintf("Failed: #%d: %v", id, err))
+			continue
+		}
+		if post.Status == store.StatusPosted {
+			anyPosted = true
+			lines = append(lines, fmt.Sprintf("Success: #%d (%s) id %s", id, post.Channel.Label(), post.TweetID))
+			continue
+		}
+		msg := strings.TrimSpace(post.LastError)
+		if msg == "" {
+			msg = fmt.Sprintf("status %s", post.Status)
+		}
+		lines = append(lines, fmt.Sprintf("Failed: #%d (%s): %s", id, post.Channel.Label(), xapi.UserMessage(fmt.Errorf("%s", msg))))
+	}
+	return lines, anyPosted
+}
+
+func formatQueuedSummary(ids []int64, sched time.Time) string {
+	if len(ids) == 1 {
+		return fmt.Sprintf("Queued post #%d for %s", ids[0], sched.Format(time.RFC3339))
+	}
+	return fmt.Sprintf("Queued posts %s for %s", formatIDList(ids), sched.Format(time.RFC3339))
+}
+
+func formatIDList(ids []int64) string {
+	var b strings.Builder
+	for i, id := range ids {
+		if i > 0 {
+			b.WriteString(", ")
+		}
+		b.WriteString(fmt.Sprintf("#%d", id))
+	}
+	return b.String()
 }
 
 func (m model) parsedSchedule() (time.Time, error) {
@@ -389,7 +516,31 @@ func (m model) View() tea.View {
 			b.WriteString("\n")
 		}
 		b.WriteString("\n")
-		b.WriteString(hintLine("↑/↓ j/k: move · enter: next · esc: quit"))
+		b.WriteString(hintLine("↑/↓ j/k: move · enter: compose · esc: quit"))
+
+	case stepBody:
+		b.WriteString(framedBlock(m.body.View()))
+		b.WriteString("\n")
+		hint := "ctrl+d: done · esc: quit (when not editing)"
+		if m.kindCursor == 1 {
+			hint = "ctrl+d: done → pick image · esc: quit (when not editing)"
+		}
+		b.WriteString(hintLine(hint))
+
+	case stepMedia:
+		b.WriteString(framedBlock(m.picker.View()))
+		b.WriteString("\n")
+		b.WriteString(hintLine("enter: pick file · h/esc: parent · q: quit"))
+
+	case stepChannels:
+		cat := channels.Catalog()
+		for i, e := range cat {
+			line := channelPickLine(i == m.channelCursor, m.channelSel[e.ID], e)
+			b.WriteString(line)
+			b.WriteString("\n")
+		}
+		b.WriteString("\n")
+		b.WriteString(hintLine("↑/↓: move · space: toggle · enter: continue"))
 
 	case stepWhen:
 		opts := []string{"Post now (queue + flush immediately)", "Schedule for later"}
@@ -407,16 +558,6 @@ func (m model) View() tea.View {
 		b.WriteString("\n")
 		b.WriteString(hintLine("enter: continue when valid"))
 
-	case stepBody:
-		b.WriteString(framedBlock(m.body.View()))
-		b.WriteString("\n")
-		b.WriteString(hintLine("ctrl+d: done composing · esc: quit (when not editing)"))
-
-	case stepMedia:
-		b.WriteString(framedBlock(m.picker.View()))
-		b.WriteString("\n")
-		b.WriteString(hintLine("enter: pick file · h/esc: parent · q: quit"))
-
 	case stepConfirm:
 		kind := "Text only"
 		if m.kindCursor == 1 {
@@ -427,7 +568,11 @@ func (m model) View() tea.View {
 			t, _ := m.parsedSchedule()
 			when = t.Format(time.RFC3339)
 		}
+		chLabels := m.confirmChannelLabels()
 		var sum strings.Builder
+		sum.WriteString(labelStyle().Render("Channels "))
+		sum.WriteString(valueStyle().Render(chLabels))
+		sum.WriteString("\n")
 		sum.WriteString(labelStyle().Render("Kind "))
 		sum.WriteString(valueStyle().Render(kind))
 		sum.WriteString("\n")
@@ -450,12 +595,49 @@ func (m model) View() tea.View {
 
 		b.WriteString(framedBlock(sum.String()))
 		b.WriteString("\n")
-		b.WriteString(hintLine("y / enter: submit · n / h / ← : back to edit"))
+		b.WriteString(hintLine("y / enter: submit · n / h / ← : back"))
 	}
 
 	v := tea.NewView(b.String())
 	v.AltScreen = true
 	return v
+}
+
+func (m model) confirmChannelLabels() string {
+	var parts []string
+	for _, e := range channels.Catalog() {
+		if !e.Selectable || !m.channelSel[e.ID] {
+			continue
+		}
+		parts = append(parts, e.Title)
+	}
+	if len(parts) == 0 {
+		return "(none)"
+	}
+	return strings.Join(parts, ", ")
+}
+
+func channelPickLine(cursor bool, checked bool, e channels.Entry) string {
+	box := "[ ]"
+	if checked {
+		box = "[x]"
+	}
+	title := e.Title
+	if e.Subtitle != "" {
+		title = title + " · " + e.Subtitle
+	}
+	line := box + "  " + title
+	if !e.Selectable {
+		line = dimTextStyle().Render(line)
+		if cursor {
+			return cursorStyle().Render("▸ ") + line
+		}
+		return menuIdleStyle().Render("    ") + line
+	}
+	if cursor {
+		return cursorStyle().Render("▸ ") + menuSelStyle().Render(" "+line+" ")
+	}
+	return menuIdleStyle().Render("    ") + menuIdleStyle().Render(line)
 }
 
 func min(a, b int) int {

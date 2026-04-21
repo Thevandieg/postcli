@@ -38,8 +38,9 @@ func cmdPost() *cobra.Command {
 			if err := ensurePostingReady(ctx, client); err != nil {
 				return err
 			}
-			runner := &schedule.Runner{Store: st, Poster: client}
-			return post.Run(st, client, runner)
+			poster := &schedule.XChannelPoster{X: client}
+			runner := &schedule.Runner{Store: st, Poster: poster}
+			return post.Run(st, runner)
 		},
 	}
 }
