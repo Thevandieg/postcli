@@ -19,7 +19,7 @@ func UserMessage(err error) string {
 		case http.StatusPaymentRequired:
 			return "X API returned 402 Payment Required. Add a payment method or upgrade your X developer plan, then try again."
 		case http.StatusUnauthorized:
-			return "X rejected this request as unauthorized. Run `postx login` again and verify POSTX_CLIENT_ID/POSTX_CLIENT_SECRET."
+			return "X rejected this request as unauthorized. Run `postx channels configure x` and verify POSTX_CLIENT_ID/POSTX_CLIENT_SECRET."
 		case http.StatusForbidden:
 			return "X rejected this request (403 Forbidden). Verify your app has tweet.write permission and required product access."
 		case http.StatusTooManyRequests:
@@ -29,7 +29,7 @@ func UserMessage(err error) string {
 		}
 	}
 	if errors.Is(err, sql.ErrNoRows) {
-		return "You are not logged in. Run `postx login` before posting."
+		return "You are not logged in. Run `postx channels configure x` before posting."
 	}
 	raw := strings.TrimSpace(err.Error())
 	lower := strings.ToLower(raw)
@@ -39,11 +39,11 @@ func UserMessage(err error) string {
 	case strings.Contains(lower, "postx_client_secret is required"):
 		return "Missing POSTX_CLIENT_SECRET. Set your X OAuth client secret in the environment first."
 	case strings.Contains(lower, "not logged in"):
-		return "You are not logged in. Run `postx login` before posting."
+		return "You are not logged in. Run `postx channels configure x` before posting."
 	case strings.Contains(lower, "unsupported channel"), strings.Contains(lower, "integration not available"):
 		return "That channel is not available in postx yet. Only X (Twitter) can publish today; others are preview-only."
 	case strings.Contains(lower, "token refresh: 401"), strings.Contains(lower, "token exchange: 401"):
-		return "X rejected your app credentials (401). Verify POSTX_CLIENT_ID and POSTX_CLIENT_SECRET, then run `postx login` again."
+		return "X rejected your app credentials (401). Verify POSTX_CLIENT_ID and POSTX_CLIENT_SECRET, then run `postx channels configure x` again."
 	case strings.Contains(lower, "payment required"), strings.Contains(lower, " 402 "):
 		return "X API returned 402 Payment Required. Add a payment method or upgrade your X developer plan, then try again."
 	}

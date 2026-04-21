@@ -38,6 +38,7 @@ go install ./cmd/postx
 | [`internal/tui/post`](internal/tui/post) | Compose wizard (Bubble Tea) |
 | [`internal/tui/status`](internal/tui/status) | Calendar status view (Bubble Tea) |
 | [`internal/tui/channelsui`](internal/tui/channelsui) | Interactive channel browser (`postx channels`) |
+| [`internal/tui/xconfigureui`](internal/tui/xconfigureui) | Keyboard-driven X setup (`postx channels configure x`) |
 | [`internal/channels`](internal/channels) | Channel catalog for the post wizard (X + preview destinations) |
 
 ## Tests and quality

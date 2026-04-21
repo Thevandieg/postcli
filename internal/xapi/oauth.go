@@ -89,7 +89,7 @@ func (c OAuthConfig) AuthorizeURL() (authPage string, verifier string, state str
 	return authURL + "?" + q.Encode(), verifier, state, nil
 }
 
-func openBrowser(target string) error {
+func launchBrowserURL(target string) error {
 	switch runtime.GOOS {
 	case "linux":
 		return exec.Command("xdg-open", target).Start()
@@ -105,6 +105,15 @@ func openBrowser(target string) error {
 // LoginInteractive opens the system browser and runs a localhost redirect server.
 // ctx should include a deadline (e.g. context.WithTimeout); otherwise a stuck browser flow waits forever.
 func (c OAuthConfig) LoginInteractive(ctx context.Context, listenAddr string) (Token, error) {
+	return c.loginInteractive(ctx, listenAddr, true)
+}
+
+// LoginInteractiveNoBrowser prints the authorize URL and waits for the callback without opening a browser.
+func (c OAuthConfig) LoginInteractiveNoBrowser(ctx context.Context, listenAddr string) (Token, error) {
+	return c.loginInteractive(ctx, listenAddr, false)
+}
+
+func (c OAuthConfig) loginInteractive(ctx context.Context, listenAddr string, openBrowser bool) (Token, error) {
 	authPage, verifier, wantState, err := c.AuthorizeURL()
 	if err != nil {
 		return Token{}, err
@@ -169,14 +178,19 @@ func (c OAuthConfig) LoginInteractive(ctx context.Context, listenAddr string) (T
 
 	fmt.Fprintf(os.Stderr, "postx: OAuth redirect (must match X app settings): %s\n", c.RedirectURI)
 	fmt.Fprintf(os.Stderr, "postx: local server listening on %s (all interfaces; use redirect URL above in the browser)\n", listenAddr)
-	fmt.Fprintf(os.Stderr, "postx: opening browser. If nothing happens, paste this URL into a browser on the same machine as this terminal:\n%s\n", authPage)
+	fmt.Fprintf(os.Stderr, "\npostx: —— Authorization URL (copy for any browser on this machine) ——\n%s\npostx: —— end URL ——\n\n", authPage)
 	if runtime.GOOS == "linux" {
-		fmt.Fprintf(os.Stderr, "postx: WSL note: if approval succeeds but this still waits, the browser may be sending 127.0.0.1 to Windows instead of Linux — run postx login from a terminal where localhost matches your browser, or see README.\n")
+		fmt.Fprintf(os.Stderr, "postx: WSL note: if approval succeeds but this still waits, the browser may be sending 127.0.0.1 to Windows instead of Linux — run postx channels configure x from a terminal where localhost matches your browser, or see README.\n")
 	}
 
-	if err := openBrowser(authPage); err != nil {
-		_ = srv.Close()
-		return Token{}, fmt.Errorf("open browser: %w (open manually: %s)", err, authPage)
+	if openBrowser {
+		fmt.Fprintf(os.Stderr, "postx: opening browser. If nothing happens, copy the URL above.\n")
+		if err := launchBrowserURL(authPage); err != nil {
+			_ = srv.Close()
+			return Token{}, fmt.Errorf("open browser: %w (open manually: %s)", err, authPage)
+		}
+	} else {
+		fmt.Fprintf(os.Stderr, "postx: auto-open disabled — paste the URL above, approve access, then wait for this terminal to finish.\n")
 	}
 
 	var code string

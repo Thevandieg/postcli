@@ -12,7 +12,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"postcli/internal/channels"
-	"postcli/internal/config"
 	"postcli/internal/tui/channelsui"
 	"postcli/internal/xapi"
 )
@@ -121,57 +120,7 @@ func runChannelsInteractive(ctx context.Context) error {
 }
 
 func configureXChannel(ctx context.Context, timeout time.Duration) error {
-	in := bufio.NewReader(os.Stdin)
-	fmt.Print("X OAuth Client ID: ")
-	clientID, err := in.ReadString('\n')
-	if err != nil {
-		return err
-	}
-	fmt.Print("X OAuth Client Secret: ")
-	clientSecret, err := in.ReadString('\n')
-	if err != nil {
-		return err
-	}
-	clientID = strings.TrimSpace(clientID)
-	clientSecret = strings.TrimSpace(clientSecret)
-	if clientID == "" || clientSecret == "" {
-		return fmt.Errorf("both client ID and client secret are required")
-	}
-	if err := config.EnsureDir(); err != nil {
-		return err
-	}
-	envMap, err := config.LoadEnvMap()
-	if err != nil {
-		return err
-	}
-	envMap["POSTX_CLIENT_ID"] = clientID
-	envMap["POSTX_CLIENT_SECRET"] = clientSecret
-	if envMap["POSTX_REDIRECT_URI"] == "" {
-		envMap["POSTX_REDIRECT_URI"] = RedirectURI()
-	}
-	if err := config.SaveEnvMap(envMap); err != nil {
-		return err
-	}
-	if err := syncShellProfile(envMap); err != nil {
-		fmt.Fprintf(os.Stderr, "postx: warning: shell profile update failed: %v\n", err)
-	}
-	_ = os.Setenv("POSTX_CLIENT_ID", clientID)
-	_ = os.Setenv("POSTX_CLIENT_SECRET", clientSecret)
-	_ = os.Setenv("POSTX_REDIRECT_URI", envMap["POSTX_REDIRECT_URI"])
-
-	st, err := openStore(ctx)
-	if err != nil {
-		return err
-	}
-	defer st.Close()
-
-	loginCtx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
-	if err := doXLogin(loginCtx, st, RedirectURI(), timeout); err != nil {
-		return err
-	}
-	fmt.Println("postx: X channel configured and ready.")
-	return nil
+	return runXConfigureWizard(ctx, timeout)
 }
 
 func syncShellProfile(envMap map[string]string) error {

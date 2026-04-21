@@ -7,8 +7,7 @@ CLI for scheduling and posting to **X** using the X API v2, with a [Bubble Tea](
 | Command | Description |
 | -------- | ------------- |
 | `postx channels` | Interactive list: navigate channels, **Enter** to configure (X) or see preview-only notice |
-| `postx channels configure [x]` | Non-interactive configure: credentials, persist to `env`, shell profile, then login |
-| `postx login` | OAuth 2.0 with PKCE (opens browser; local callback server) |
+| `postx channels configure [x]` | **Keyboard UI:** menu + text fields + Y/N — full setup, ID/secret only, OAuth (browser or URL-only), redirect URI — persists to `env` + shell profile |
 | `postx logout` | Remove stored tokens |
 | `postx status` | Calendar + detail pane for scheduled posts |
 | `postx post` | Interactive flow: content type → compose → **channels** → schedule / post now (X live; others preview) |
@@ -34,7 +33,7 @@ Data lives under `$XDG_CONFIG_HOME/postcli` (fallback: `~/.config/postcli`): `qu
 | `POSTX_REDIRECT_URI` | Default `http://127.0.0.1:8080/callback` — must match the app settings exactly |
 | `POSTX_DRY_RUN` | If `1` / `true`, log tweet payloads and skip HTTP (no API calls) |
 
-`postx channels configure x` stores these values in `$XDG_CONFIG_HOME/postcli/env` and also writes them to your active shell profile (`.zshrc`, `.bashrc`, or fish config) so future sessions pick them up automatically.
+`postx channels configure x` opens a **Bubble Tea** screen: **↑/↓** (or **j/k**) move in menus, **enter** selects, **tab** toggles Yes/No, **esc** goes back. You can run a **full** ID + secret + login flow, or update **only** the client ID, **only** the secret, **only** OAuth, or the **redirect URI**. OAuth prints a **copy-paste authorization URL**; choose browser auto-open or URL-only (no auto-open). Values are stored in `$XDG_CONFIG_HOME/postcli/env` and mirrored into your shell profile (`.zshrc`, `.bashrc`, or fish config) when possible.
 
 ## X developer setup
 
@@ -60,9 +59,9 @@ When `postx post`, `postx flush`, or `postx daemon` cannot publish to X, use the
 - **`Missing POSTX_CLIENT_SECRET`**  
   Set `POSTX_CLIENT_SECRET` to your app’s OAuth 2.0 client secret.
 - **`You are not logged in`**  
-  Run `postx channels configure x` (or `postx login`) then retry posting.
+  Run `postx channels configure x` then retry posting.
 - **`X rejected this request as unauthorized (401)`**  
-  Re-check `POSTX_CLIENT_ID` / `POSTX_CLIENT_SECRET` and run `postx login` again.
+  Re-check `POSTX_CLIENT_ID` / `POSTX_CLIENT_SECRET` and run `postx channels configure x` again.
 - **`X API returned 402 Payment Required`**  
   Your X API project likely needs billing/payment enabled or a higher tier; add payment method in the X portal and retry.
 - **`X rejected this request (403 Forbidden)`**  
@@ -114,7 +113,7 @@ systemctl --user enable --now postx-flush.timer
 
 ## Notes
 
-- **`postx login` seems to hang:** The terminal waits until your browser completes the redirect. **WSL2:** the callback server binds **`0.0.0.0:port`** (not only `127.0.0.1`) so traffic from a **Windows** browser to `http://127.0.0.1:8080/callback` can reach the Linux process after OS port forwarding. Your **redirect URI in the X portal** must still be exactly `http://127.0.0.1:8080/callback` (or whatever you set). The command prints the authorize URL and uses a **5-minute timeout** (`postx login --timeout 10m` to change).
+- **`postx channels configure x` seems to hang on login:** The terminal waits until your browser completes the redirect. **WSL2:** the callback server binds **`0.0.0.0:port`** (not only `127.0.0.1`) so traffic from a **Windows** browser to `http://127.0.0.1:8080/callback` can reach the Linux process after OS port forwarding. Your **redirect URI in the X portal** must still be exactly `http://127.0.0.1:8080/callback` (or whatever you set). The command prints the authorize URL and uses a **5-minute timeout** in the setup menu.
 - Scheduled times in the **post** wizard use **local** time (`2006-01-02 15:04`); they are stored in UTC in the database.
 - **Media**: small images are uploaded via `upload.twitter.com` v1.1 simple upload, then attached to a v2 tweet. Large video or chunked upload is not implemented here.
-- If `login` fails with redirect or TLS issues, confirm the redirect URI in the portal matches `POSTX_REDIRECT_URI` exactly (including host, port, and path).
+- If channel OAuth fails with redirect or TLS issues, confirm the redirect URI in the portal matches `POSTX_REDIRECT_URI` exactly (including host, port, and path).
