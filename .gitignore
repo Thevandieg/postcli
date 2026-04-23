@@ -18,6 +18,8 @@ go.work.sum
 # Build directories
 bin/
 dist/
+npm-package/
+platform-packages/
 
 # IDE / editor
 .idea/
