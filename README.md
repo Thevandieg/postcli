@@ -1,83 +1,120 @@
 # postx
 
-CLI for scheduling and posting to **X** using the X API v2, with a [Bubble Tea](https://github.com/charmbracelet/bubbletea) + [Bubbles](https://github.com/charmbracelet/bubbles) UI.
+Minimal terminal UI for composing, scheduling, and publishing social posts.
+In `v1.0.0`, live publishing supports **X (Twitter)** only.
 
-## Commands
+## Contents
 
-| Command | Description |
-| -------- | ------------- |
-| `postx channels` | Interactive list: navigate channels, **Enter** to configure (X) or see preview-only notice |
-| `postx channels configure [x]` | **Keyboard UI:** menu + text fields + Y/N — full setup, ID/secret only, OAuth (browser or URL-only), redirect URI — persists to `env` + shell profile |
-| `postx logout` | Remove stored tokens |
-| `postx status` | Calendar + detail pane for scheduled posts |
-| `postx post` | Interactive flow: content type → compose → **channels** → schedule / post now (X live; others preview) |
-| `postx flush` | Process all due posts once (for cron or systemd) |
-| `postx daemon` | Poll on an interval and run `flush` logic |
-| `postx cancel ID` | Soft-cancel a **pending** post |
-| `postx theme` | Show the active TUI theme and list presets |
-| `postx theme ls` | List themes (`violet`, `sky`, `orange`, `neutral`, `green`) |
-| `postx theme set NAME` | Save a theme to `$XDG_CONFIG_HOME/postcli/theme` (aliases: `blue`→sky, `pink`→violet, …) |
+- [postx](#postx)
+  - [Contents](#contents)
+  - [Why postx](#why-postx)
+  - [Current platform support](#current-platform-support)
+  - [Install](#install)
+  - [Quick start](#quick-start)
+  - [Commands](#commands)
+  - [X setup (OAuth)](#x-setup-oauth)
+  - [Environment variables](#environment-variables)
+  - [Scheduler automation (systemd)](#scheduler-automation-systemd)
+  - [Troubleshooting](#troubleshooting)
+  - [Contributing](#contributing)
+  - [License](#license)
 
-In **`postx status`**: **←/→** or **h/l** moves the selected day by one; **↑/↓** or **j/k** moves by one week; **`[` / `]`** changes month; **`t`** jumps to today (UTC).
+## Why postx
 
-Data lives under `$XDG_CONFIG_HOME/postcli` (fallback: `~/.config/postcli`): `queue.db`, `oauth.json`, `env`.
+- Keyboard-first flow for writing, scheduling, and publishing posts.
+- Queue-based scheduler with `flush` and `daemon` modes.
+- Theme support for visual preferences in terminal workflows.
 
-**`postx post` steps:** choose **content type** (text-only or text + image), write the body, pick an image if needed, then pick one or more **channels** (only **X** publishes today; Mastodon, Bluesky, and Threads are preview placeholders), then choose immediate post or a scheduled time. Each selected channel gets its **own queue row** (same text, time, and media path).
+## Current platform support
 
-## Environment
+- **X (Twitter):** fully supported for live publishing.
+- **Mastodon, Bluesky, Threads:** preview placeholders in `v1.0.0`.
 
-| Variable | Meaning |
-| ---------- | --------- |
-| `POSTX_CLIENT_ID` | OAuth 2.0 client ID from the X developer portal |
-| `POSTX_CLIENT_SECRET` | **Often required:** X’s token URL expects an `Authorization: Basic` header. Use the **OAuth 2.0 Client Secret** from your app (not the old API Key Secret unless that’s what the portal shows for OAuth 2). If login still fails with `401` / `invalid_client`, ensure this matches the portal exactly. |
-| `POSTX_REDIRECT_URI` | Default `http://127.0.0.1:8080/callback` — must match the app settings exactly |
-| `POSTX_DRY_RUN` | If `1` / `true`, log tweet payloads and skip HTTP (no API calls) |
+## Install
 
-`postx channels configure x` opens a **Bubble Tea** screen: **↑/↓** (or **j/k**) move in menus, **enter** selects, **tab** toggles Yes/No, **esc** goes back. You can run a **full** ID + secret + login flow, or update **only** the client ID, **only** the secret, **only** OAuth, or the **redirect URI**. OAuth prints a **copy-paste authorization URL**; choose browser auto-open or URL-only (no auto-open). Values are stored in `$XDG_CONFIG_HOME/postcli/env` and mirrored into your shell profile (`.zshrc`, `.bashrc`, or fish config) when possible.
-
-## X developer setup
-
-1. Create a project and app in the [X developer portal](https://developer.twitter.com/).
-2. Enable **OAuth 2.0** with type **Native App** or **Web** as appropriate; note the **Client ID** (and **Client Secret** if confidential).
-3. Add the redirect URL you will use (default `http://127.0.0.1:8080/callback`) under the app’s callback / redirect list.
-4. Request user-auth scopes that allow posting, for example: `tweet.read`, `tweet.write`, `users.read`, `offline.access` (for refresh tokens).
-
-Posting requires API access that allows creating tweets (per X’s current product tiers).
-
-## Build
+Build from source:
 
 ```bash
 go build -o postx ./cmd/postx
 ```
 
-## Troubleshooting posting
+Install to your `PATH`:
 
-When `postx post`, `postx flush`, or `postx daemon` cannot publish to X, use these messages:
+```bash
+go install ./cmd/postx
+```
 
-- **`Missing POSTX_CLIENT_ID`**  
-  Set `POSTX_CLIENT_ID` to your OAuth 2.0 client ID from the X portal.
-- **`Missing POSTX_CLIENT_SECRET`**  
-  Set `POSTX_CLIENT_SECRET` to your app’s OAuth 2.0 client secret.
-- **`You are not logged in`**  
-  Run `postx channels configure x` then retry posting.
-- **`X rejected this request as unauthorized (401)`**  
-  Re-check `POSTX_CLIENT_ID` / `POSTX_CLIENT_SECRET` and run `postx channels configure x` again.
-- **`X API returned 402 Payment Required`**  
-  Your X API project likely needs billing/payment enabled or a higher tier; add payment method in the X portal and retry.
-- **`X rejected this request (403 Forbidden)`**  
-  Confirm your app has `tweet.write` and the required product access.
-- **`X rate limit reached (429)`**  
-  Wait and retry later.
+## Quick start
 
-On immediate posting, success feedback now includes the tweet ID:
+```bash
+# 1) Build or install
+go install ./cmd/postx
 
-- `Success: posted #<local_post_id> to X (tweet <tweet_id>).`
+# 2) Configure X OAuth (interactive)
+postx channels configure x
 
-## systemd user timer (flush every minute)
+# 3) Create and publish/schedule a post
+postx post
 
-Replace `/path/to/postx` and ensure `POSTX_CLIENT_ID` (and other env vars) are available to the service (e.g. an `EnvironmentFile`).
+# 4) Check scheduled queue
+postx status
+```
 
-`~/.config/systemd/user/postx-flush.service`:
+Data is stored in `$XDG_CONFIG_HOME/postcli` (fallback `~/.config/postcli`):
+`queue.db`, `oauth.json`, `env`, and `theme`.
+
+## Commands
+
+| Command | Description |
+| --- | --- |
+| `postx channels` | Browse channels; configure X or view preview-only channels |
+| `postx channels configure x` | Interactive setup menu for client ID/secret, OAuth, and redirect URI |
+| `postx post` | Compose flow: content type -> text/media -> channels -> post now or schedule |
+| `postx status` | Calendar + details for scheduled posts |
+| `postx flush` | Process due posts once (good for cron/systemd) |
+| `postx daemon` | Poll on an interval and process due posts continuously |
+| `postx cancel ID` | Soft-cancel a pending queued post |
+| `postx logout` | Remove stored OAuth tokens |
+| `postx theme` | Show active theme and available theme commands |
+| `postx theme ls` | List themes (`violet`, `sky`, `orange`, `neutral`, `green`) |
+| `postx theme set NAME` | Persist selected theme under config dir |
+
+Status view navigation:
+
+- Day: `left/right` or `h/l`
+- Week: `up/down` or `j/k`
+- Month: `[` and `]`
+- Jump to today (UTC): `t`
+
+## X setup (OAuth)
+
+1. Create an app in the [X developer portal](https://developer.twitter.com/).
+2. Enable OAuth 2.0 and copy your client credentials.
+3. Add redirect URI (default: `http://127.0.0.1:8080/callback`).
+4. Ensure scopes include: `tweet.read`, `tweet.write`, `users.read`,
+   and `offline.access`.
+5. Run `postx channels configure x` and complete login.
+
+`postx channels configure x` supports:
+
+- full setup flow,
+- updating only client ID,
+- updating only client secret,
+- rerunning OAuth only,
+- updating redirect URI only.
+
+## Environment variables
+
+| Variable | Description |
+| --- | --- |
+| `POSTX_CLIENT_ID` | OAuth 2.0 client ID |
+| `POSTX_CLIENT_SECRET` | OAuth 2.0 client secret (required in most setups) |
+| `POSTX_REDIRECT_URI` | OAuth callback URI (default `http://127.0.0.1:8080/callback`) |
+| `POSTX_DRY_RUN` | If `1` or `true`, skips API calls and logs payloads |
+
+## Scheduler automation (systemd)
+
+Example user service (`~/.config/systemd/user/postx-flush.service`):
 
 ```ini
 [Unit]
@@ -89,7 +126,7 @@ EnvironmentFile=%h/.config/postcli/env
 ExecStart=/path/to/postx flush
 ```
 
-`~/.config/systemd/user/postx-flush.timer`:
+Example user timer (`~/.config/systemd/user/postx-flush.timer`):
 
 ```ini
 [Unit]
@@ -104,16 +141,42 @@ Unit=postx-flush.service
 WantedBy=timers.target
 ```
 
-Then:
+Enable it:
 
 ```bash
 systemctl --user daemon-reload
 systemctl --user enable --now postx-flush.timer
 ```
 
-## Notes
+## Troubleshooting
 
-- **`postx channels configure x` seems to hang on login:** The terminal waits until your browser completes the redirect. **WSL2:** the callback server binds **`0.0.0.0:port`** (not only `127.0.0.1`) so traffic from a **Windows** browser to `http://127.0.0.1:8080/callback` can reach the Linux process after OS port forwarding. Your **redirect URI in the X portal** must still be exactly `http://127.0.0.1:8080/callback` (or whatever you set). The command prints the authorize URL and uses a **5-minute timeout** in the setup menu.
-- Scheduled times in the **post** wizard use **local** time (`2006-01-02 15:04`); they are stored in UTC in the database.
-- **Media**: small images are uploaded via `upload.twitter.com` v1.1 simple upload, then attached to a v2 tweet. Large video or chunked upload is not implemented here.
-- If channel OAuth fails with redirect or TLS issues, confirm the redirect URI in the portal matches `POSTX_REDIRECT_URI` exactly (including host, port, and path).
+- **`Missing POSTX_CLIENT_ID`**
+  Set `POSTX_CLIENT_ID` and retry.
+- **`Missing POSTX_CLIENT_SECRET`**
+  Set `POSTX_CLIENT_SECRET` and retry.
+- **`You are not logged in`**
+  Run `postx channels configure x`.
+- **`401 unauthorized`**
+  Re-check client credentials and redo OAuth login.
+- **`402 payment required`**
+  Your X project may need billing-enabled API access.
+- **`403 forbidden`**
+  Verify app permissions include `tweet.write`.
+- **`429 rate limit`**
+  Wait and retry later.
+
+WSL2 note:
+If login appears stuck, keep the terminal open until browser redirect completes.
+The callback listener binds to `0.0.0.0:port` for WSL2 compatibility.
+
+Media note:
+Simple image upload is supported; chunked large media/video upload is not in
+`v1.0.0`.
+
+## Contributing
+
+Please read [`CONTRIBUTING.md`](CONTRIBUTING.md) before opening pull requests.
+
+## License
+
+MIT. See [`LICENSE`](LICENSE).
