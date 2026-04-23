@@ -1,0 +1,36 @@
+# Binaries
+postx
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test artifacts
+*.test
+*.out
+coverage.out
+
+# Go workspace / modules
+go.work
+go.work.sum
+
+# Build directories
+bin/
+dist/
+
+# IDE / editor
+.idea/
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Project local config/secrets
+env
+*.env
+.env
+oauth.json
+queue.db
+.config/postcli/
