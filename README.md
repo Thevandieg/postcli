@@ -32,13 +32,25 @@ In `v1.0.0`, live publishing supports **X (Twitter)** only.
 
 ## Install
 
-Build from source:
+Primary option (npm):
+
+```bash
+npm i -g @thevandieg/postx
+```
+
+Run without global install:
+
+```bash
+npx @thevandieg/postx --help
+```
+
+Alternative (build from source):
 
 ```bash
 go build -o postx ./cmd/postx
 ```
 
-Install to your `PATH`:
+Alternative (install via Go toolchain):
 
 ```bash
 go install ./cmd/postx
@@ -47,8 +59,8 @@ go install ./cmd/postx
 ## Quick start
 
 ```bash
-# 1) Build or install
-go install ./cmd/postx
+# 1) Install with npm
+npm i -g @thevandieg/postx
 
 # 2) Configure X OAuth (interactive)
 postx channels configure x
