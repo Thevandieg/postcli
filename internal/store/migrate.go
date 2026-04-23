@@ -64,4 +64,3 @@ func migratePostsAddChannel(ctx context.Context, db *sql.DB) error {
 	_, err = db.ExecContext(ctx, `ALTER TABLE posts ADD COLUMN channel TEXT NOT NULL DEFAULT 'x'`)
 	return err
 }
-

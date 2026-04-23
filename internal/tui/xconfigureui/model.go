@@ -52,12 +52,12 @@ type model struct {
 	errLine    string
 	infoLine   string
 
-	form     formKind
-	formStep int
-	draftID  string
-	draftSec string
-	draftRed string
-	commitID string
+	form      formKind
+	formStep  int
+	draftID   string
+	draftSec  string
+	draftRed  string
+	commitID  string
 	commitSec string
 
 	ti textinput.Model

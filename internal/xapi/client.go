@@ -121,8 +121,8 @@ func (c *Client) AccessToken(ctx context.Context) (string, error) {
 }
 
 type createTweetRequest struct {
-	Text   string              `json:"text,omitempty"`
-	Media  *createTweetMedia   `json:"media,omitempty"`
+	Text  string            `json:"text,omitempty"`
+	Media *createTweetMedia `json:"media,omitempty"`
 }
 
 type createTweetMedia struct {

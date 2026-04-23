@@ -33,7 +33,7 @@ func Run(st *store.Store) error {
 		store: st,
 		month: time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC),
 		day:   time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC),
-		vp: viewport.New(viewport.WithWidth(72), viewport.WithHeight(14)),
+		vp:    viewport.New(viewport.WithWidth(72), viewport.WithHeight(14)),
 	}
 	p := tea.NewProgram(m)
 	_, err := p.Run()

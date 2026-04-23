@@ -33,16 +33,16 @@ type PostPayload struct {
 }
 
 type Post struct {
-	ID               int64
-	Kind             PostKind
-	Channel          Channel
-	Payload          PostPayload
-	ScheduledAt      time.Time
-	Status           PostStatus
-	IdempotencyKey   string
-	LastError        string
-	TweetID          string
-	CreatedAt        time.Time
+	ID             int64
+	Kind           PostKind
+	Channel        Channel
+	Payload        PostPayload
+	ScheduledAt    time.Time
+	Status         PostStatus
+	IdempotencyKey string
+	LastError      string
+	TweetID        string
+	CreatedAt      time.Time
 }
 
 func (s *Store) InsertPost(ctx context.Context, channel Channel, kind PostKind, payload PostPayload, scheduledAt time.Time, status PostStatus, idempotencyKey string) (int64, error) {
@@ -117,10 +117,10 @@ func (s *Store) ListPendingInRange(ctx context.Context, from, to time.Time) ([]P
 
 func scanPostRow(row *sql.Row) (Post, error) {
 	var (
-		p                         Post
+		p                          Post
 		kind, ch, pay, sched, stat string
-		idemNull                  sql.NullString
-		lastErr, tweetID, created string
+		idemNull                   sql.NullString
+		lastErr, tweetID, created  string
 	)
 	err := row.Scan(&p.ID, &kind, &ch, &pay, &sched, &stat, &idemNull, &lastErr, &tweetID, &created)
 	if err != nil {
