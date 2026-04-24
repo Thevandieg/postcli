@@ -1,7 +1,6 @@
 ![postx banner](.github/banner.svg)
 
 ### Minimal terminal UI for composing, scheduling, and publishing social posts.
-In `v1.0.0`, live publishing supports **X (Twitter)** only.
 
 ## Contents
 
