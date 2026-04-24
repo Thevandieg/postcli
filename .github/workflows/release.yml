@@ -7,7 +7,6 @@ on:
 
 permissions:
   contents: write
-  id-token: write
 
 jobs:
   release:
@@ -21,12 +20,6 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-          registry-url: "https://registry.npmjs.org"
 
       - name: Build binaries and archives
         run: |
@@ -55,21 +48,3 @@ jobs:
             dist/postx-darwin-amd64.tar.gz
             dist/postx-darwin-arm64.tar.gz
             dist/postx-windows-amd64.zip
-
-      - name: Build npm package directories
-        run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          ./scripts/build-npm-packages.sh "$VERSION" @thevandieg/postx https://github.com/thevandieg/postcli.git
-
-      - name: Publish platform npm packages
-        run: |
-          set -euo pipefail
-          for d in platform-packages/*; do
-            echo "Publishing $d"
-            (cd "$d" && npm publish --provenance --access public)
-          done
-
-      - name: Publish main npm package
-        run: |
-          cd npm-package
-          npm publish --provenance --access public
