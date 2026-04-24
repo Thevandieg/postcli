@@ -1,0 +1,79 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Build binaries and archives
+        run: |
+          set -euo pipefail
+          rm -rf dist
+          mkdir -p dist
+
+          CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o dist/postx-linux-amd64 ./cmd/postx
+          CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o dist/postx-linux-arm64 ./cmd/postx
+          CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o dist/postx-darwin-amd64 ./cmd/postx
+          CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags="-s -w" -o dist/postx-darwin-arm64 ./cmd/postx
+          CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -trimpath -ldflags="-s -w" -o dist/postx-windows-amd64.exe ./cmd/postx
+
+          tar -C dist -czf dist/postx-linux-amd64.tar.gz postx-linux-amd64
+          tar -C dist -czf dist/postx-linux-arm64.tar.gz postx-linux-arm64
+          tar -C dist -czf dist/postx-darwin-amd64.tar.gz postx-darwin-amd64
+          tar -C dist -czf dist/postx-darwin-arm64.tar.gz postx-darwin-arm64
+          zip -j dist/postx-windows-amd64.zip dist/postx-windows-amd64.exe
+
+      - name: Upload GitHub release assets
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            dist/postx-linux-amd64.tar.gz
+            dist/postx-linux-arm64.tar.gz
+            dist/postx-darwin-amd64.tar.gz
+            dist/postx-darwin-arm64.tar.gz
+            dist/postx-windows-amd64.zip
+
+      - name: Build npm package directories
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          ./scripts/build-npm-packages.sh "$VERSION" @thevandieg/postx https://github.com/thevandieg/postcli.git
+
+      - name: Publish platform npm packages
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          set -euo pipefail
+          for d in platform-packages/*; do
+            echo "Publishing $d"
+            (cd "$d" && npm publish --access public)
+          done
+
+      - name: Publish main npm package
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          cd npm-package
+          npm publish --access public
