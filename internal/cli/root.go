@@ -8,8 +8,8 @@ import (
 func Execute() error {
 	root := &cobra.Command{
 		Use:   "postx",
-		Short: "Schedule and post to X from the terminal",
-		Long:  "postx is a Bubble Tea TUI and headless scheduler for X (Twitter) API v2.",
+		Short: "Minimal CLI to compose, schedule, and publish social posts",
+		Long:  "postx is a minimal CLI to compose, schedule, and publish social posts.",
 	}
 	root.AddCommand(cmdChannels(), cmdLogout(), cmdPost(), cmdStatus(), cmdFlush(), cmdDaemon(), cmdCancel(), cmdTheme())
 	root.SilenceUsage = true
