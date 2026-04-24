@@ -1,23 +1,22 @@
-# postx
+![postx banner](.github/banner.svg)
 
-Minimal terminal UI for composing, scheduling, and publishing social posts.
+### Minimal terminal UI for composing, scheduling, and publishing social posts.
 In `v1.0.0`, live publishing supports **X (Twitter)** only.
 
 ## Contents
 
-- [postx](#postx)
-  - [Contents](#contents)
-  - [Why postx](#why-postx)
-  - [Current platform support](#current-platform-support)
-  - [Install](#install)
-  - [Quick start](#quick-start)
-  - [Commands](#commands)
-  - [X setup (OAuth)](#x-setup-oauth)
-  - [Environment variables](#environment-variables)
-  - [Scheduler automation (systemd)](#scheduler-automation-systemd)
-  - [Troubleshooting](#troubleshooting)
-  - [Contributing](#contributing)
-  - [License](#license)
+- [Contents](#contents)
+- [Why postx](#why-postx)
+- [Current platform support](#current-platform-support)
+- [Install](#install)
+- [Quick start](#quick-start)
+- [Commands](#commands)
+- [X setup (OAuth)](#x-setup-oauth)
+- [Environment variables](#environment-variables)
+- [Scheduler automation (systemd)](#scheduler-automation-systemd)
+- [Troubleshooting](#troubleshooting)
+- [Contributing](#contributing)
+- [License](#license)
 
 ## Why postx
 
