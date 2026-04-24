@@ -61,30 +61,15 @@ jobs:
           VERSION="${GITHUB_REF_NAME#v}"
           ./scripts/build-npm-packages.sh "$VERSION" @thevandieg/postx https://github.com/thevandieg/postcli.git
 
-      - name: Validate npm token
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          set -euo pipefail
-          if [ -z "${NODE_AUTH_TOKEN:-}" ]; then
-            echo "NPM_TOKEN is missing. Add it in repository secrets."
-            exit 1
-          fi
-          npm whoami
-
       - name: Publish platform npm packages
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           set -euo pipefail
           for d in platform-packages/*; do
             echo "Publishing $d"
-            (cd "$d" && npm publish --access public)
+            (cd "$d" && npm publish --provenance --access public)
           done
 
       - name: Publish main npm package
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           cd npm-package
-          npm publish --access public
+          npm publish --provenance --access public
