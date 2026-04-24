@@ -1,6 +1,16 @@
 ![postx banner](.github/banner.svg)
 
 ### Minimal terminal UI for composing, scheduling, and publishing social posts.
+CLI-Postx is a minimal, keyboard-centric command-line tool for drafting, scheduling, and publishing social media posts from your terminal. With an intuitive queue-based workflow, built-in scheduling tools, and support for multiple platforms, `postx` streamlines the process of managing posts without ever leaving the command line.
+
+Features include:
+- Fast "compose → queue → schedule → publish" workflow
+- Support for multiple channels (social media platforms)
+- Useful built-in commands for status, channel management, daemonized scheduling, and queue flushing
+- OAuth setup for secure API access
+- Customizable themes for improved terminal UX
+
+Perfect for developers and social media managers who prefer a streamlined, code-first posting experience.
 
 ## Contents
 
@@ -26,7 +36,7 @@
 ## Current platform support
 
 - **X (Twitter):** fully supported for live publishing.
-- **Mastodon, Bluesky, Threads:** preview placeholders in `v1.0.0`.
+- **Mastodon, Bluesky, Threads:** preview future channels.
 
 ## Install
 
@@ -34,12 +44,6 @@ Primary option (npm):
 
 ```bash
 npm i -g @thevandieg/postx
-```
-
-Run without global install:
-
-```bash
-npx @thevandieg/postx --help
 ```
 
 Alternative (build from source):
