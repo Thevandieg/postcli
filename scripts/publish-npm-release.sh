@@ -2,16 +2,28 @@
 
 set -euo pipefail
 
+# IMPORTANT:
+# Delete the dist folder before running this script to avoid stale artifacts.
+# Example:
+#   rm -rf dist
+#   ./scripts/publish-npm-release.sh 1.0.4
+#
+# This script will:
+# 1) Build release binaries and archives into dist/ (via build-release-assets.sh)
+# 2) Generate npm-package/ and platform-packages/
+# 3) Publish platform packages first
+# 4) Publish main package last
+
 if [ "$#" -lt 1 ]; then
   echo "Usage: $0 <version> [package-name] [repo-url]"
-  echo "Example: $0 1.0.0 @thevandieg/postx https://github.com/thevandieg/postcli.git"
+  echo "Example: $0 1.0.4 @thevandieg/postx https://github.com/thevandieg/postcli.git"
   exit 1
 fi
 
 VERSION="$1"
 PACKAGE_NAME="${2:-@thevandieg/postx}"
 REPO_URL="${3:-https://github.com/thevandieg/postcli.git}"
-DESCRIPTION="Minimal CLI to compose, schedule, and publish social posts (X only in v${VERSION})"
+DESCRIPTION="Minimal CLI to compose, schedule, and publish social posts"
 AUTHOR="thevandieg"
 LICENSE_NAME="MIT"
 
@@ -19,10 +31,14 @@ MAIN_PACKAGE_DIR="npm-package"
 PLATFORM_PACKAGES_DIR="platform-packages"
 DIST_DIR="dist"
 
-if [ ! -d "$DIST_DIR" ]; then
-  echo "Missing $DIST_DIR directory. Put release archives in $DIST_DIR first."
+if [ -d "$DIST_DIR" ]; then
+  echo "dist/ already exists."
+  echo "Please delete it first to avoid stale artifacts:"
+  echo "  rm -rf dist"
   exit 1
 fi
+
+./scripts/build-release-assets.sh
 
 rm -rf "$MAIN_PACKAGE_DIR" "$PLATFORM_PACKAGES_DIR"
 mkdir -p "$MAIN_PACKAGE_DIR/bin" "$PLATFORM_PACKAGES_DIR"
@@ -45,44 +61,24 @@ declare -A CPU_MAP=(
   ["win32-arm64"]="arm64"
 )
 
-# Supports both simple names (postx-linux-amd64.tar.gz) and goreleaser-style
-# names (postx_1.0.0_Linux_x86_64.tar.gz).
 get_platform_keys_for_archive() {
   local file_name="$1"
-
   case "$file_name" in
-    postx-linux-amd64|postx_"${VERSION}"_Linux_x86_64)
-      echo "linux-x64"
-      ;;
-    postx-linux-arm64|postx_"${VERSION}"_Linux_arm64)
-      echo "linux-arm64"
-      ;;
-    postx-darwin-amd64|postx_"${VERSION}"_Darwin_x86_64)
-      echo "darwin-x64"
-      ;;
-    postx-darwin-arm64|postx_"${VERSION}"_Darwin_arm64)
-      echo "darwin-arm64"
-      ;;
-    postx_"${VERSION}"_Darwin_all)
-      echo "darwin-x64,darwin-arm64"
-      ;;
-    postx-windows-amd64|postx_"${VERSION}"_Windows_x86_64)
-      echo "win32-x64"
-      ;;
-    postx-windows-arm64|postx_"${VERSION}"_Windows_arm64)
-      echo "win32-arm64"
-      ;;
-    *)
-      echo ""
-      ;;
+    postx-linux-amd64|postx_"${VERSION}"_Linux_x86_64) echo "linux-x64" ;;
+    postx-linux-arm64|postx_"${VERSION}"_Linux_arm64) echo "linux-arm64" ;;
+    postx-darwin-amd64|postx_"${VERSION}"_Darwin_x86_64) echo "darwin-x64" ;;
+    postx-darwin-arm64|postx_"${VERSION}"_Darwin_arm64) echo "darwin-arm64" ;;
+    postx_"${VERSION}"_Darwin_all) echo "darwin-x64,darwin-arm64" ;;
+    postx-windows-amd64|postx_"${VERSION}"_Windows_x86_64) echo "win32-x64" ;;
+    postx-windows-arm64|postx_"${VERSION}"_Windows_arm64) echo "win32-arm64" ;;
+    *) echo "" ;;
   esac
 }
 
+echo "Generating npm package directories..."
 OPTIONAL_DEPS=""
-
 for archive in "$DIST_DIR"/*.tar.gz "$DIST_DIR"/*.zip; do
   [ -f "$archive" ] || continue
-
   archive_name="$(basename "$archive")"
   archive_name="${archive_name%.tar.gz}"
   archive_name="${archive_name%.zip}"
@@ -102,7 +98,6 @@ for archive in "$DIST_DIR"/*.tar.gz "$DIST_DIR"/*.zip; do
     mkdir -p "$platform_package_dir/bin"
 
     echo "  Creating package for platform: $platform_key"
-
     if [[ "$archive" == *.tar.gz ]]; then
       tar -xzf "$archive" -C "$platform_package_dir/bin"
     else
@@ -120,7 +115,6 @@ for archive in "$DIST_DIR"/*.tar.gz "$DIST_DIR"/*.zip; do
       binary_name="postx.exe"
     fi
 
-    # Normalize extracted binary name if archive has postx-* naming.
     if [ ! -f "$platform_package_dir/bin/$binary_name" ]; then
       found_bin=""
       for candidate in "$platform_package_dir/bin"/postx "$platform_package_dir/bin"/postx-* "$platform_package_dir/bin"/postx_*.exe "$platform_package_dir/bin"/postx.exe "$platform_package_dir/bin"/postx-*.exe; do
@@ -135,7 +129,6 @@ for archive in "$DIST_DIR"/*.tar.gz "$DIST_DIR"/*.zip; do
     fi
 
     chmod +x "$platform_package_dir/bin/"* || true
-
     os_value="${OS_MAP[$platform_key]}"
     cpu_value="${CPU_MAP[$platform_key]}"
 
@@ -182,7 +175,6 @@ cat > "$MAIN_PACKAGE_DIR/bin/postx" << EOF
 #!/usr/bin/env node
 
 const { execFileSync } = require("node:child_process");
-
 const packageName = "$PACKAGE_NAME";
 const platformPackages = {
   "darwin-x64": \`\${packageName}-darwin-x64\`,
@@ -196,12 +188,10 @@ const platformPackages = {
 function getBinaryPath() {
   const platformKey = \`\${process.platform}-\${process.arch}\`;
   const platformPackageName = platformPackages[platformKey];
-
   if (!platformPackageName) {
     console.error(\`Platform \${platformKey} is not supported.\`);
     process.exit(1);
   }
-
   const binaryName = process.platform === "win32" ? "postx.exe" : "postx";
   try {
     return require.resolve(\`\${platformPackageName}/bin/\${binaryName}\`);
@@ -224,7 +214,6 @@ chmod +x "$MAIN_PACKAGE_DIR/bin/postx"
 
 cat > "$MAIN_PACKAGE_DIR/index.js" << EOF
 const { execFileSync } = require("node:child_process");
-
 const packageName = "$PACKAGE_NAME";
 const platformPackages = {
   "darwin-x64": \`\${packageName}-darwin-x64\`,
@@ -298,11 +287,14 @@ elif [ -f "README.md" ]; then
   cp "README.md" "$MAIN_PACKAGE_DIR/"
 fi
 
+echo "Publishing platform packages first..."
+for d in platform-packages/*; do
+  echo "Publishing $d"
+  (cd "$d" && npm publish --access public)
+done
+
+echo "Publishing main package last..."
+(cd npm-package && npm publish --access public)
+
 echo
-echo "Done."
-echo "Main package: $MAIN_PACKAGE_DIR"
-echo "Platform packages: $PLATFORM_PACKAGES_DIR"
-echo
-echo "Next:"
-echo "  1) cd $MAIN_PACKAGE_DIR && npm publish --access public"
-echo "  2) for d in ../$PLATFORM_PACKAGES_DIR/*; do (cd \"\$d\" && npm publish --access public); done"
+echo "Done. Published version $VERSION for $PACKAGE_NAME."
