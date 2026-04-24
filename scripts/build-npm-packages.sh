@@ -122,9 +122,15 @@ for archive in "$DIST_DIR"/*.tar.gz "$DIST_DIR"/*.zip; do
 
     # Normalize extracted binary name if archive has postx-* naming.
     if [ ! -f "$platform_package_dir/bin/$binary_name" ]; then
-      found_bin="$(ls "$platform_package_dir/bin" | rg "^postx($|[-_].*|\.exe$)" -m 1 || true)"
-      if [ -n "${found_bin:-}" ]; then
-        mv "$platform_package_dir/bin/$found_bin" "$platform_package_dir/bin/$binary_name"
+      found_bin=""
+      for candidate in "$platform_package_dir/bin"/postx "$platform_package_dir/bin"/postx-* "$platform_package_dir/bin"/postx_*.exe "$platform_package_dir/bin"/postx.exe "$platform_package_dir/bin"/postx-*.exe; do
+        if [ -f "$candidate" ]; then
+          found_bin="$candidate"
+          break
+        fi
+      done
+      if [ -n "$found_bin" ]; then
+        mv "$found_bin" "$platform_package_dir/bin/$binary_name"
       fi
     fi
 
@@ -279,7 +285,13 @@ cat > "$MAIN_PACKAGE_DIR/package.json" << EOF
 }
 EOF
 
-first_platform_dir="$(ls -1d "$PLATFORM_PACKAGES_DIR"/* | rg "." -m 1 || true)"
+first_platform_dir=""
+for d in "$PLATFORM_PACKAGES_DIR"/*; do
+  if [ -d "$d" ]; then
+    first_platform_dir="$d"
+    break
+  fi
+done
 if [ -n "$first_platform_dir" ] && [ -f "$first_platform_dir/README.md" ]; then
   cp "$first_platform_dir/README.md" "$MAIN_PACKAGE_DIR/"
 elif [ -f "README.md" ]; then
