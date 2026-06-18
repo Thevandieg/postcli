@@ -164,8 +164,9 @@ func TestClientLiveMock(t *testing.T) {
 			return
 		}
 		var payload struct {
-			DraftTitle string `json:"draft_title"`
-			DraftBody  string `json:"draft_body"`
+			DraftTitle   string `json:"draft_title"`
+			DraftBody    string `json:"draft_body"`
+			DraftBylines []any  `json:"draft_bylines"`
 		}
 		dec := json.NewDecoder(r.Body)
 		if err := dec.Decode(&payload); err != nil {
@@ -174,6 +175,10 @@ func TestClientLiveMock(t *testing.T) {
 		}
 		if payload.DraftTitle == "" || payload.DraftBody == "" {
 			http.Error(w, "missing title or body", http.StatusBadRequest)
+			return
+		}
+		if payload.DraftBylines == nil {
+			http.Error(w, "missing draft_bylines array", http.StatusBadRequest)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")

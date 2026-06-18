@@ -266,36 +266,38 @@ func (m model) updateChannels(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.err = ""
 			return m, nil
 		case "down", "j":
-			if m.channelCursor < len(cat)-1 {
+			if m.channelCursor < len(cat) {
 				m.channelCursor++
 			}
 			m.err = ""
 			return m, nil
-		case " ":
-			e := cat[m.channelCursor]
-			if !e.Selectable {
-				m.err = "That destination is preview-only for now (not queued)."
+		case " ", "enter":
+			if m.channelCursor < len(cat) {
+				e := cat[m.channelCursor]
+				if !e.Selectable {
+					m.err = "That destination is preview-only for now (not queued)."
+					return m, nil
+				}
+				if m.channelSel[e.ID] {
+					if m.countSelectedChannels() <= 1 {
+						m.err = "Select at least one channel."
+						return m, nil
+					}
+					delete(m.channelSel, e.ID)
+				} else {
+					m.channelSel[e.ID] = true
+				}
+				m.err = ""
 				return m, nil
-			}
-			if m.channelSel[e.ID] {
-				if m.countSelectedChannels() <= 1 {
+			} else if k.String() == "enter" {
+				if m.countSelectedChannels() == 0 {
 					m.err = "Select at least one channel."
 					return m, nil
 				}
-				delete(m.channelSel, e.ID)
-			} else {
-				m.channelSel[e.ID] = true
-			}
-			m.err = ""
-			return m, nil
-		case "enter":
-			if m.countSelectedChannels() == 0 {
-				m.err = "Select at least one channel."
+				m.err = ""
+				m.step = stepWhen
 				return m, nil
 			}
-			m.err = ""
-			m.step = stepWhen
-			return m, nil
 		}
 	}
 	return m, nil
@@ -540,7 +542,16 @@ func (m model) View() tea.View {
 			b.WriteString("\n")
 		}
 		b.WriteString("\n")
-		b.WriteString(hintLine("↑/↓: move · space: toggle · enter: continue"))
+		
+		var continueLine string
+		if m.channelCursor == len(cat) {
+			continueLine = cursorStyle().Render("▸ ") + menuSelStyle().Render(" [ Confirm & Continue ] ")
+		} else {
+			continueLine = menuIdleStyle().Render("    ") + menuIdleStyle().Render("[ Confirm & Continue ]")
+		}
+		b.WriteString(continueLine + "\n\n")
+		
+		b.WriteString(hintLine("↑/↓: move · enter/space: toggle channel · select [ Confirm & Continue ] to proceed"))
 
 	case stepWhen:
 		opts := []string{"Post now (queue + flush immediately)", "Schedule for later"}

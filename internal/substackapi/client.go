@@ -193,12 +193,14 @@ func (c *Client) createDraft(ctx context.Context, title, proseMirrorBody string)
 	type DraftPayload struct {
 		DraftTitle    string `json:"draft_title"`
 		DraftSubtitle string `json:"draft_subtitle"`
+		DraftBylines  []any  `json:"draft_bylines"`
 		DraftBody     string `json:"draft_body"`
 	}
 
 	payload := DraftPayload{
 		DraftTitle:    title,
 		DraftSubtitle: "",
+		DraftBylines:  []any{},
 		DraftBody:     proseMirrorBody,
 	}
 
