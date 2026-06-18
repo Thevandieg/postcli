@@ -542,7 +542,7 @@ func (m model) View() tea.View {
 			b.WriteString("\n")
 		}
 		b.WriteString("\n")
-		
+
 		var continueLine string
 		if m.channelCursor == len(cat) {
 			continueLine = cursorStyle().Render("▸ ") + menuSelStyle().Render(" [ Confirm & Continue ] ")
@@ -550,7 +550,7 @@ func (m model) View() tea.View {
 			continueLine = menuIdleStyle().Render("    ") + menuIdleStyle().Render("[ Confirm & Continue ]")
 		}
 		b.WriteString(continueLine + "\n\n")
-		
+
 		b.WriteString(hintLine("↑/↓: move · enter/space: toggle channel · select [ Confirm & Continue ] to proceed"))
 
 	case stepWhen:

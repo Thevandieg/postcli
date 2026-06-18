@@ -183,7 +183,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				envMap := map[string]string{
 					"POSTX_SUBSTACK_PUBLICATION": pubVal,
 					"POSTX_SUBSTACK_COOKIE":      cookieVal,
-					"POSTX_SUBSTACK_SEND_EMAIL":   sendEmailVal,
+					"POSTX_SUBSTACK_SEND_EMAIL":  sendEmailVal,
 				}
 
 				if err := m.deps.PersistEnv(envMap); err != nil {
@@ -286,7 +286,7 @@ func (m model) View() tea.View {
 
 	if m.errLine != "" {
 		b.WriteString("\n")
-		b.WriteString(errStyle().Render("Error: " + m.errLine) + "\n")
+		b.WriteString(errStyle().Render("Error: "+m.errLine) + "\n")
 	}
 
 	v := tea.NewView(b.String())

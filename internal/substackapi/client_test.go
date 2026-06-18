@@ -51,8 +51,8 @@ func TestExtractTitle(t *testing.T) {
 			wantBody:  "My First Post",
 		},
 		{
-			name: "multi-line with short first line",
-			text: "My Amazing Title\n\nThis is the body of the post.\nIt has multiple lines.",
+			name:      "multi-line with short first line",
+			text:      "My Amazing Title\n\nThis is the body of the post.\nIt has multiple lines.",
 			wantTitle: "My Amazing Title",
 			wantBody:  "This is the body of the post.\nIt has multiple lines.",
 		},
