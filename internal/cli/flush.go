@@ -6,9 +6,7 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"postcli/internal/config"
 	"postcli/internal/schedule"
-	"postcli/internal/xapi"
 )
 
 func cmdFlush() *cobra.Command {
@@ -22,17 +20,7 @@ func cmdFlush() *cobra.Command {
 				return err
 			}
 			defer st.Close()
-			client := &xapi.Client{
-				OAuth: xapi.OAuthConfig{
-					ClientID:     ClientID(),
-					ClientSecret: ClientSecret(),
-					RedirectURI:  RedirectURI(),
-				},
-				TokenStore: st,
-				TokenPath:  config.TokenPath(),
-				DryRun:     DryRun(),
-			}
-			poster := &schedule.XChannelPoster{X: client}
+			poster := newAppPoster(st)
 			r := &schedule.Runner{Store: st, Poster: poster}
 			if err := r.FlushDue(ctx, nowUTC()); err != nil {
 				return err

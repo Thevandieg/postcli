@@ -39,6 +39,36 @@ func RedirectURI() string {
 	return "http://127.0.0.1:8080/callback"
 }
 
+func SubstackCookie() string {
+	if v := strings.TrimSpace(os.Getenv("POSTX_SUBSTACK_COOKIE")); v != "" {
+		return v
+	}
+	if kv, err := config.LoadEnvMap(); err == nil {
+		return strings.TrimSpace(kv["POSTX_SUBSTACK_COOKIE"])
+	}
+	return ""
+}
+
+func SubstackPublication() string {
+	if v := strings.TrimSpace(os.Getenv("POSTX_SUBSTACK_PUBLICATION")); v != "" {
+		return v
+	}
+	if kv, err := config.LoadEnvMap(); err == nil {
+		return strings.TrimSpace(kv["POSTX_SUBSTACK_PUBLICATION"])
+	}
+	return ""
+}
+
+func SubstackSendEmail() bool {
+	var v string
+	if ev := strings.TrimSpace(os.Getenv("POSTX_SUBSTACK_SEND_EMAIL")); ev != "" {
+		v = ev
+	} else if kv, err := config.LoadEnvMap(); err == nil {
+		v = strings.TrimSpace(kv["POSTX_SUBSTACK_SEND_EMAIL"])
+	}
+	return v == "1" || strings.EqualFold(v, "true") || strings.EqualFold(v, "yes")
+}
+
 func DryRun() bool {
 	v := strings.TrimSpace(os.Getenv("POSTX_DRY_RUN"))
 	return v == "1" || strings.EqualFold(v, "true") || strings.EqualFold(v, "yes")

@@ -20,6 +20,12 @@ func Catalog() []Entry {
 			Selectable: true,
 		},
 		{
+			ID:         store.ChannelSubstack,
+			Title:      "Substack",
+			Subtitle:   "Available",
+			Selectable: true,
+		},
+		{
 			ID:         store.ChannelMastodon,
 			Title:      "Mastodon",
 			Subtitle:   "Preview · coming soon",

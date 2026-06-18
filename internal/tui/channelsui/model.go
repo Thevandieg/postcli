@@ -19,6 +19,7 @@ const (
 	ActionNone Action = iota
 	ActionQuit
 	ActionConfigureX
+	ActionConfigureSubstack
 )
 
 // Run shows the channel list; use Enter on a row to choose an action.
@@ -94,6 +95,9 @@ func (m model) activate() (tea.Model, tea.Cmd) {
 	switch s.Entry.ID {
 	case store.ChannelX:
 		m.action = ActionConfigureX
+		return m, tea.Quit
+	case store.ChannelSubstack:
+		m.action = ActionConfigureSubstack
 		return m, tea.Quit
 	default:
 		m.errLine = fmt.Sprintf("%s is preview-only — integration coming later.", s.Entry.Title)

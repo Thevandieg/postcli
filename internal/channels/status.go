@@ -16,20 +16,22 @@ type Status struct {
 	Detail     string
 }
 
-type XConfig struct {
-	ClientID     string
-	ClientSecret string
+type Config struct {
+	XClientID           string
+	XClientSecret       string
+	SubstackCookie      string
+	SubstackPublication string
 }
 
 // Statuses returns user-facing setup status for all channels.
-func Statuses(ctx context.Context, st *store.Store, xCfg XConfig) []Status {
+func Statuses(ctx context.Context, st *store.Store, cfg Config) []Status {
 	out := make([]Status, 0, len(Catalog()))
 	for _, e := range Catalog() {
 		s := Status{Entry: e}
 		switch e.ID {
 		case store.ChannelX:
-			idOK := strings.TrimSpace(xCfg.ClientID) != ""
-			secOK := strings.TrimSpace(xCfg.ClientSecret) != ""
+			idOK := strings.TrimSpace(cfg.XClientID) != ""
+			secOK := strings.TrimSpace(cfg.XClientSecret) != ""
 			tokenOK := false
 			if st != nil {
 				_, err := st.LoadOAuth(ctx)
@@ -48,6 +50,22 @@ func Statuses(ctx context.Context, st *store.Store, xCfg XConfig) []Status {
 				default:
 					s.Detail = "configured"
 				}
+			}
+		case store.ChannelSubstack:
+			cookieOK := strings.TrimSpace(cfg.SubstackCookie) != ""
+			pubOK := strings.TrimSpace(cfg.SubstackPublication) != ""
+			s.Configured = cookieOK && pubOK
+			if !cookieOK || !pubOK {
+				var missing []string
+				if !cookieOK {
+					missing = append(missing, "cookie")
+				}
+				if !pubOK {
+					missing = append(missing, "publication")
+				}
+				s.Detail = "missing " + strings.Join(missing, " and ")
+			} else {
+				s.Detail = "configured"
 			}
 		default:
 			s.Configured = false

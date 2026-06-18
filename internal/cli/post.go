@@ -8,7 +8,6 @@ import (
 	"postcli/internal/config"
 	"postcli/internal/schedule"
 	"postcli/internal/tui/post"
-	"postcli/internal/xapi"
 )
 
 func cmdPost() *cobra.Command {
@@ -25,17 +24,7 @@ func cmdPost() *cobra.Command {
 				return err
 			}
 			defer st.Close()
-			client := &xapi.Client{
-				OAuth: xapi.OAuthConfig{
-					ClientID:     ClientID(),
-					ClientSecret: ClientSecret(),
-					RedirectURI:  RedirectURI(),
-				},
-				TokenStore: st,
-				TokenPath:  config.TokenPath(),
-				DryRun:     DryRun(),
-			}
-			poster := &schedule.XChannelPoster{X: client}
+			poster := newAppPoster(st)
 			runner := &schedule.Runner{Store: st, Poster: poster}
 			return post.Run(st, runner)
 		},

@@ -4,7 +4,9 @@ package store
 type Channel string
 
 const (
-	ChannelX Channel = "x"
+	ChannelX        Channel = "x"
+	ChannelSubstack Channel = "substack"
+
 	// Preview-only IDs (not persisted until integrations ship).
 	ChannelMastodon Channel = "mastodon"
 	ChannelBluesky  Channel = "bluesky"
@@ -16,6 +18,8 @@ func (c Channel) Label() string {
 	switch c {
 	case ChannelX:
 		return "X (Twitter)"
+	case ChannelSubstack:
+		return "Substack"
 	case ChannelMastodon:
 		return "Mastodon"
 	case ChannelBluesky:

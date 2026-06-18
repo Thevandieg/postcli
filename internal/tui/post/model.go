@@ -70,7 +70,7 @@ func Run(st *store.Store, runner *schedule.Runner) error {
 	ta.Placeholder = "What's happening?"
 	ta.SetWidth(56)
 	ta.SetHeight(6)
-	ta.CharLimit = 280
+	ta.CharLimit = 10000
 
 	fp := filepicker.New()
 	fp.AllowedTypes = []string{".jpg", ".jpeg", ".png", ".gif", ".webp"}

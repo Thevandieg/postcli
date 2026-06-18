@@ -53,6 +53,8 @@ func cmdChannelsConfigure() *cobra.Command {
 			switch ch {
 			case "x", "twitter":
 				return configureXChannel(context.Background(), timeout)
+			case "substack":
+				return configureSubstackChannel(context.Background())
 			default:
 				return fmt.Errorf("channel %q not supported yet", ch)
 			}
@@ -65,10 +67,11 @@ func cmdChannelsConfigure() *cobra.Command {
 func promptChannelSelection() (string, error) {
 	fmt.Println("Select a channel to configure:")
 	fmt.Println("  1) X (Twitter)")
-	fmt.Println("  2) Mastodon (coming soon)")
-	fmt.Println("  3) Bluesky (coming soon)")
-	fmt.Println("  4) Threads (coming soon)")
-	fmt.Print("Enter choice [1-4]: ")
+	fmt.Println("  2) Substack")
+	fmt.Println("  3) Mastodon (coming soon)")
+	fmt.Println("  4) Bluesky (coming soon)")
+	fmt.Println("  5) Threads (coming soon)")
+	fmt.Print("Enter choice [1-5]: ")
 	in := bufio.NewReader(os.Stdin)
 	line, err := in.ReadString('\n')
 	if err != nil {
@@ -77,11 +80,13 @@ func promptChannelSelection() (string, error) {
 	switch strings.TrimSpace(line) {
 	case "1", "x", "twitter":
 		return "x", nil
-	case "2":
-		return "", fmt.Errorf("Mastodon integration is preview-only for now")
+	case "2", "substack":
+		return "substack", nil
 	case "3":
-		return "", fmt.Errorf("Bluesky integration is preview-only for now")
+		return "", fmt.Errorf("Mastodon integration is preview-only for now")
 	case "4":
+		return "", fmt.Errorf("Bluesky integration is preview-only for now")
+	case "5":
 		return "", fmt.Errorf("Threads integration is preview-only for now")
 	default:
 		return "", fmt.Errorf("invalid selection")
@@ -95,9 +100,11 @@ func runChannelsInteractive(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		stats := channels.Statuses(ctx, st, channels.XConfig{
-			ClientID:     ClientID(),
-			ClientSecret: ClientSecret(),
+		stats := channels.Statuses(ctx, st, channels.Config{
+			XClientID:           ClientID(),
+			XClientSecret:       ClientSecret(),
+			SubstackCookie:      SubstackCookie(),
+			SubstackPublication: SubstackPublication(),
 		})
 		st.Close()
 
@@ -113,6 +120,11 @@ func runChannelsInteractive(ctx context.Context) error {
 				fmt.Fprintf(os.Stderr, "postx: configure: %v\n", err)
 			}
 			continue
+		case channelsui.ActionConfigureSubstack:
+			if err := configureSubstackChannel(ctx); err != nil {
+				fmt.Fprintf(os.Stderr, "postx: configure: %v\n", err)
+			}
+			continue
 		default:
 			return nil
 		}
@@ -121,6 +133,10 @@ func runChannelsInteractive(ctx context.Context) error {
 
 func configureXChannel(ctx context.Context, timeout time.Duration) error {
 	return runXConfigureWizard(ctx, timeout)
+}
+
+func configureSubstackChannel(ctx context.Context) error {
+	return runSubstackConfigureWizard(ctx)
 }
 
 func syncShellProfile(envMap map[string]string) error {
@@ -165,7 +181,14 @@ func detectShellProfile() (path string, fishStyle bool, err error) {
 func buildEnvBlock(envMap map[string]string, fishStyle bool) string {
 	var b strings.Builder
 	b.WriteString(envMarkerStart + "\n")
-	keys := []string{"POSTX_CLIENT_ID", "POSTX_CLIENT_SECRET", "POSTX_REDIRECT_URI"}
+	keys := []string{
+		"POSTX_CLIENT_ID",
+		"POSTX_CLIENT_SECRET",
+		"POSTX_REDIRECT_URI",
+		"POSTX_SUBSTACK_PUBLICATION",
+		"POSTX_SUBSTACK_COOKIE",
+		"POSTX_SUBSTACK_SEND_EMAIL",
+	}
 	for _, k := range keys {
 		v := strings.TrimSpace(envMap[k])
 		if v == "" {
