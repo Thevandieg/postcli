@@ -19,6 +19,9 @@ type Status struct {
 type Config struct {
 	XClientID           string
 	XClientSecret       string
+	XBackend            string
+	XquikAPIKey         string
+	XquikAccount        string
 	SubstackCookie      string
 	SubstackPublication string
 }
@@ -30,6 +33,23 @@ func Statuses(ctx context.Context, st *store.Store, cfg Config) []Status {
 		s := Status{Entry: e}
 		switch e.ID {
 		case store.ChannelX:
+			if strings.EqualFold(strings.TrimSpace(cfg.XBackend), "xquik") {
+				keyOK := strings.TrimSpace(cfg.XquikAPIKey) != ""
+				acctOK := strings.TrimSpace(cfg.XquikAccount) != ""
+				s.Configured = keyOK && acctOK
+				switch {
+				case !keyOK && !acctOK:
+					s.Detail = "missing Xquik API key and account"
+				case !keyOK:
+					s.Detail = "missing Xquik API key"
+				case !acctOK:
+					s.Detail = "missing Xquik account"
+				default:
+					s.Detail = "configured via Xquik"
+				}
+				out = append(out, s)
+				continue
+			}
 			idOK := strings.TrimSpace(cfg.XClientID) != ""
 			secOK := strings.TrimSpace(cfg.XClientSecret) != ""
 			tokenOK := false

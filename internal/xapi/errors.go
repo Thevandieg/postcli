@@ -34,6 +34,12 @@ func UserMessage(err error) string {
 	raw := strings.TrimSpace(err.Error())
 	lower := strings.ToLower(raw)
 	switch {
+	case strings.Contains(lower, "postx_xquik_api_key is required"):
+		return "Missing POSTX_XQUIK_API_KEY. Set your Xquik API key or switch POSTX_X_BACKEND back to x."
+	case strings.Contains(lower, "postx_xquik_account is required"):
+		return "Missing POSTX_XQUIK_ACCOUNT. Set the connected X account for Xquik posting."
+	case strings.Contains(lower, "xquik backend requires public media urls"):
+		return "Local media uploads require the default X backend. Use POSTX_X_BACKEND=x for media posts."
 	case strings.Contains(lower, "postx_client_id is required"):
 		return "Missing POSTX_CLIENT_ID. Set your X OAuth client ID in the environment first."
 	case strings.Contains(lower, "postx_client_secret is required"):

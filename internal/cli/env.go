@@ -39,6 +39,50 @@ func RedirectURI() string {
 	return "http://127.0.0.1:8080/callback"
 }
 
+func XBackend() string {
+	var v string
+	if ev := strings.TrimSpace(os.Getenv("POSTX_X_BACKEND")); ev != "" {
+		v = ev
+	} else if kv, err := config.LoadEnvMap(); err == nil {
+		v = strings.TrimSpace(kv["POSTX_X_BACKEND"])
+	}
+	v = strings.ToLower(strings.TrimSpace(v))
+	if v == "" {
+		return "x"
+	}
+	return v
+}
+
+func XquikAPIKey() string {
+	if v := strings.TrimSpace(os.Getenv("POSTX_XQUIK_API_KEY")); v != "" {
+		return v
+	}
+	if kv, err := config.LoadEnvMap(); err == nil {
+		return strings.TrimSpace(kv["POSTX_XQUIK_API_KEY"])
+	}
+	return ""
+}
+
+func XquikAccount() string {
+	if v := strings.TrimSpace(os.Getenv("POSTX_XQUIK_ACCOUNT")); v != "" {
+		return v
+	}
+	if kv, err := config.LoadEnvMap(); err == nil {
+		return strings.TrimSpace(kv["POSTX_XQUIK_ACCOUNT"])
+	}
+	return ""
+}
+
+func XquikCreateTweetURL() string {
+	if v := strings.TrimSpace(os.Getenv("POSTX_XQUIK_CREATE_TWEET_URL")); v != "" {
+		return v
+	}
+	if kv, err := config.LoadEnvMap(); err == nil {
+		return strings.TrimSpace(kv["POSTX_XQUIK_CREATE_TWEET_URL"])
+	}
+	return ""
+}
+
 func SubstackCookie() string {
 	if v := strings.TrimSpace(os.Getenv("POSTX_SUBSTACK_COOKIE")); v != "" {
 		return v

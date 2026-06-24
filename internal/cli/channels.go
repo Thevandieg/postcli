@@ -103,6 +103,9 @@ func runChannelsInteractive(ctx context.Context) error {
 		stats := channels.Statuses(ctx, st, channels.Config{
 			XClientID:           ClientID(),
 			XClientSecret:       ClientSecret(),
+			XBackend:            XBackend(),
+			XquikAPIKey:         XquikAPIKey(),
+			XquikAccount:        XquikAccount(),
 			SubstackCookie:      SubstackCookie(),
 			SubstackPublication: SubstackPublication(),
 		})
@@ -185,6 +188,10 @@ func buildEnvBlock(envMap map[string]string, fishStyle bool) string {
 		"POSTX_CLIENT_ID",
 		"POSTX_CLIENT_SECRET",
 		"POSTX_REDIRECT_URI",
+		"POSTX_X_BACKEND",
+		"POSTX_XQUIK_API_KEY",
+		"POSTX_XQUIK_ACCOUNT",
+		"POSTX_XQUIK_CREATE_TWEET_URL",
 		"POSTX_SUBSTACK_PUBLICATION",
 		"POSTX_SUBSTACK_COOKIE",
 		"POSTX_SUBSTACK_SEND_EMAIL",

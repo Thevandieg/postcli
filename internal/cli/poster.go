@@ -6,6 +6,7 @@ import (
 	"postcli/internal/store"
 	"postcli/internal/substackapi"
 	"postcli/internal/xapi"
+	"postcli/internal/xquikapi"
 )
 
 // newAppPoster instantiates and configures a multi-channel poster.
@@ -26,8 +27,16 @@ func newAppPoster(st *store.Store) schedule.Poster {
 		SendEmail:   SubstackSendEmail(),
 		DryRun:      DryRun(),
 	}
+	xquikClient := &xquikapi.Client{
+		APIKey:         XquikAPIKey(),
+		Account:        XquikAccount(),
+		CreateTweetURL: XquikCreateTweetURL(),
+		DryRun:         DryRun(),
+	}
 	return &schedule.AppPoster{
+		XBackend: XBackend(),
 		X:        xClient,
+		Xquik:    xquikClient,
 		Substack: substackClient,
 	}
 }
