@@ -7,6 +7,8 @@ import (
 	"time"
 
 	"postcli/internal/store"
+	"postcli/internal/xapi"
+	"postcli/internal/xquikapi"
 )
 
 type fakePoster struct {
@@ -100,5 +102,35 @@ func TestRunnerFailed(t *testing.T) {
 	}
 	if p == nil || p.Status != store.StatusFailed || p.LastError == "" {
 		t.Fatalf("%+v", p)
+	}
+}
+
+func TestAppPosterUsesDefaultXBackend(t *testing.T) {
+	p := &AppPoster{
+		X: &xapi.Client{DryRun: true},
+	}
+	id, err := p.PostText(context.Background(), store.ChannelX, "hello")
+	if err != nil {
+		t.Fatalf("PostText returned error: %v", err)
+	}
+	if id != "dry-run-id" {
+		t.Fatalf("id = %q; want dry-run-id", id)
+	}
+}
+
+func TestAppPosterUsesXquikBackendWhenSelected(t *testing.T) {
+	p := &AppPoster{
+		XBackend: "xquik",
+		Xquik: &xquikapi.Client{
+			Account: "@acct",
+			DryRun:  true,
+		},
+	}
+	id, err := p.PostText(context.Background(), store.ChannelX, "hello")
+	if err != nil {
+		t.Fatalf("PostText returned error: %v", err)
+	}
+	if id != "dry-run-xquik-id" {
+		t.Fatalf("id = %q; want dry-run-xquik-id", id)
 	}
 }

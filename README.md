@@ -21,6 +21,7 @@ Perfect for developers and social media managers who prefer a streamlined, code-
 - [Quick start](#quick-start)
 - [Commands](#commands)
 - [X setup (OAuth)](#x-setup-oauth)
+- [Optional Xquik backend](#optional-xquik-backend)
 - [Environment variables](#environment-variables)
 - [Scheduler automation (systemd)](#scheduler-automation-systemd)
 - [Troubleshooting](#troubleshooting)
@@ -35,7 +36,8 @@ Perfect for developers and social media managers who prefer a streamlined, code-
 
 ## Current platform support
 
-- **X (Twitter):** fully supported for live publishing.
+- **X (Twitter):** fully supported for live publishing through OAuth or an
+  optional Xquik backend.
 - **Mastodon, Bluesky, Threads:** preview future channels.
 
 ## Install
@@ -117,6 +119,16 @@ Status view navigation:
 - rerunning OAuth only,
 - updating redirect URI only.
 
+## Optional Xquik backend
+
+Set `POSTX_X_BACKEND=xquik` to publish text-only X posts through Xquik instead
+of the built-in X OAuth client. Provide `POSTX_XQUIK_API_KEY` and
+`POSTX_XQUIK_ACCOUNT` with the connected X account handle or ID.
+
+Local media uploads still require the default X backend because postx stores
+media as local files and Xquik's create-tweet endpoint accepts public media
+URLs.
+
 ## Environment variables
 
 | Variable | Description |
@@ -124,6 +136,10 @@ Status view navigation:
 | `POSTX_CLIENT_ID` | OAuth 2.0 client ID |
 | `POSTX_CLIENT_SECRET` | OAuth 2.0 client secret (required in most setups) |
 | `POSTX_REDIRECT_URI` | OAuth callback URI (default `http://127.0.0.1:8080/callback`) |
+| `POSTX_X_BACKEND` | X posting backend: `x` (default) or `xquik` |
+| `POSTX_XQUIK_API_KEY` | Xquik API key, required when `POSTX_X_BACKEND=xquik` |
+| `POSTX_XQUIK_ACCOUNT` | Xquik connected X account handle or ID |
+| `POSTX_XQUIK_CREATE_TWEET_URL` | Optional Xquik create-tweet endpoint override |
 | `POSTX_DRY_RUN` | If `1` or `true`, skips API calls and logs payloads |
 
 ## Scheduler automation (systemd)
